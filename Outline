@@ -7,3 +7,13 @@ backtesting == forward-testing
   for all tdays in range find level 1 iDs generated on that day and forward-test this indication ´til end of global tday range
   what is the % bw/fw?
   is there periodicity?
+  
+periodicity = auto_fit(w(x.range)).variation
+  variation = w(x.range) > w(y.range) __ x<~>y & there is no overlap between x and y
+  auto_fit(glb_tdays):
+    wpers = find longest consequetive periods w = 1
+    lpers = remaining periods
+    merge wpers with lpers itemwise maintaining the highest w value for wpers and the lowest w value for lpers
+    return boolean mask of timeseries
+    
+  
