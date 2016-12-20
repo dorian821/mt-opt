@@ -1,0 +1,556 @@
+Sub Premarket_Update()
+
+Dim tnpsht As Worksheet
+Dim tnplog As Worksheet
+Dim tnprunlog As Worksheet
+
+Dim lastrun As Date
+Dim c As Integer
+Dim r As Integer
+Dim s As Integer
+Dim tr As Integer
+Dim logdirectory As String
+Dim directory As String
+Dim t As Integer
+
+Application.ScreenUpdating = False
+
+logdirectory = "C:\Users\asus\Dropbox\Outlines\MTAUTO-PYTHON\Logs\"
+directory = "C:\Users\asus\Dropbox\Outlines\MTAUTO-PYTHON\Trades_&_Plays\"
+
+Set tnpsht = Workbooks("TRADES & PLAYS REPORT").Sheets("TRADES & PLAYS REPORT")
+Workbooks.Open logdirectory & "Trades_&_Plays_Log"
+Set tnplog = Workbooks("Trades_&_Plays_Log").Sheets(1)
+Workbooks.Open logdirectory & "TnPRunLog"
+Set tnprunlog = Workbooks("TnPRunLog").Sheets(1)
+
+tr = tnprunlog.Cells(tnprunlog.Rows.Count, "A").End(xlUp).Row
+tlr = tnplog.Cells(tnplog.Rows.Count, "A").End(xlUp).Row
+c = tnplog.Cells(1, Columns.Count).End(xlToLeft).Column
+r = tnplog.Cells(tnplog.Rows.Count, "A").End(xlUp).Row
+Debug.Print c, r
+lastrun = tnprunlog.Cells(tr, 1).Value
+
+'tnplog.Range(Cells(1, 1), Cells(r, c)).Sort key1:=Range("A1"), _
+      'order1:=xlDescending
+If r > 27 Then
+For t = 2 To tlr
+    For s = 27 To r Step 21
+        If tnpsht.Cells(s, 9).Value = tnplog.Cells(t, 1).Value Then
+        Exit For
+        End If
+    Next
+    Call Create_New_Trade(t)
+Next
+End If
+
+Workbooks("Trades_&_Plays_Log").Close
+Workbooks("TnPRunLog").Close
+Workbooks("TRADES & PLAYS REPORT").Close (True)
+End Sub
+
+Sub Update()
+
+Dim tnpsht As Worksheet
+Dim tnplog As Worksheet
+Dim tnprunlog As Worksheet
+
+Dim lastrun As Date
+Dim c As Integer
+Dim r As Integer
+Dim s As Integer
+Dim tr As Integer
+
+Dim logdirectory As String
+Dim directory As String
+
+logdirectory = "C:\Users\asus\Dropbox\Outlines\MTAUTO-PYTHON\Logs\"
+directory = "C:\Users\asus\Dropbox\Outlines\MTAUTO-PYTHON\Trades_&_Plays\"
+
+Set tnpsht = Workbooks("TRADES & PLAYS REPORT").Sheets("TRADES & PLAYS REPORT")
+Workbooks.Open logdirectory & "Trades_&_Plays_Log"
+Set tnplog = Workbooks("Trades_&_Plays_Log").Sheets(1)
+Workbooks.Open logdirectory & "TnPRunLog"
+Set tnprunlog = Workbooks("TnPRunLog").Sheets(1)
+
+
+tr = tnprunlog.Cells(tnprunlog.Rows.Count, "A").End(xlUp).Row
+c = tnplog.Cells(1, Columns.Count).End(xlToLeft).Column
+r = tnplog.Cells(tnplog.Rows.Count, "A").End(xlUp).Row
+lastrun = tnprunlog.Cells(tr, 1).Value
+
+'tnplog.Range(tnplog.Cells(1, 1), tnplog.Cells(r, c)).Sort key1:=Range("A1"), order1:=xlAscending
+
+For s = 2 To r
+    If tnplog.Cells(s, 6).Value > lastrun Then 'Expiration
+        Debug.Print tnplog.Cells(s, 6).Value, lastrun
+        Call Update_Trade(s)
+    End If
+Next
+End Sub
+
+Sub Create_New_Trade(t As Integer)
+
+Dim tnpsht As Worksheet
+Dim tnplog As Worksheet
+Dim tnprunlog As Worksheet
+
+Dim lastrun As Date
+Dim d As Date
+
+Dim c As Integer
+Dim r As Integer
+Dim s As Integer
+Dim tr As Integer
+Dim kd As Integer
+Dim ks As Integer
+Dim kx As Integer
+Dim ko As Integer
+
+Dim logdirectory As String
+Dim directory As String
+
+logdirectory = "C:\Users\asus\Dropbox\Outlines\MTAUTO-PYTHON\Logs\"
+directory = "C:\Users\asus\Dropbox\Outlines\MTAUTO-PYTHON\Trades_&_Plays\"
+
+Set tnpsht = Workbooks("TRADES & PLAYS REPORT").Sheets("TRADES & PLAYS REPORT")
+'Workbooks.Open logdirectory & "Trades_&_Plays_Log"
+Set tnplog = Workbooks("Trades_&_Plays_Log").Sheets(1)
+'Workbooks.Open logdirectory & "TnPRunLog"
+Set tnprunlog = Workbooks("TnPRunLog").Sheets(1)
+r = tnpsht.Cells(tnpsht.Rows.Count, "A").End(xlUp).Row + 2
+Debug.Print r
+
+
+'set template
+tnpsht.Range("A2:CE21").Copy
+tnpsht.Range(tnpsht.Cells(r, 1), tnpsht.Cells(r + 19, 83)).PasteSpecial xlPasteFormats
+tnpsht.Range(tnpsht.Cells(r, 1), tnpsht.Cells(r + 19, 83)).PasteSpecial xlPasteFormulas
+
+For kd = 1 To 100
+    If tnplog.Cells(1, kd).Value = "Trade_Date" Then
+        Exit For
+    End If
+Next
+
+For ks = 1 To 100
+    If tnplog.Cells(1, ks).Value = "Underlying_Symbol" Then
+        Exit For
+    End If
+Next
+
+For kx = 1 To 100
+    If tnplog.Cells(1, kx).Value = "Strike_Position(stx)" Then
+        Exit For
+    End If
+Next
+
+For ko = 1 To 100
+    If tnplog.Cells(1, ko).Value = "Option_Type" Then
+        Exit For
+    End If
+Next
+
+For sa = 1 To 100
+    If tnplog.Cells(1, sa).Value = "Strategy_1" Then
+        Exit For
+    End If
+Next
+
+For sb = 1 To 100
+    If tnplog.Cells(1, sb).Value = "Strategy_20" Then
+        Exit For
+    End If
+Next
+
+For tr = 1 To 100
+    If tnplog.Cells(1, tr).Value = "Trade_#" Then
+        Exit For
+    End If
+Next
+
+Debug.Print tnplog.Cells(t, 1).Value, tnpsht.Cells(r + 4, 9).Value, "kd:", kd, tnplog.Cells(t, kd).Value
+'Paste Premarket Data
+'tnpsht.Cells(r, 9).Value = tnplog.Cells(t, td).Value
+tnpsht.Cells(r, 3).Value = tnplog.Cells(t, kd).Value 'D1 Date
+tnpsht.Cells(r, 8).Value = tnplog.Cells(t, ks).Value 'symb
+tnpsht.Cells(r + 2, 10).Value = tnplog.Cells(t, kx).Value 'stx
+tnpsht.Cells(r, 10).Value = tnplog.Cells(t, ko).Value 'Option
+tnpsht.Cells(r + 4, 9).Value = tnplog.Cells(t, tr).Value
+For st = 0 To 19
+    tnpsht.Cells(r + st, 42).Value = tnplog.Cells(t, sa + st).Value
+Next
+d = tnplog.Cells(t, kd).Value
+Call LCR_Paster(d, r)
+
+End Sub
+
+Sub Update_Trade(t As Integer)
+
+Dim tnpsht As Worksheet
+Dim tnplog As Worksheet
+Dim tnprunlog As Worksheet
+Dim optn As Worksheet
+Dim stk As Worksheet
+
+Dim opt As String
+
+Dim k As Integer
+Dim o As Integer
+Dim h As Integer
+Dim l As Integer
+Dim c As Integer
+Dim v As Integer
+Dim traderow As Integer
+Dim s As Integer
+
+Dim ro As Integer
+Dim rs As Integer
+
+Dim logdirectory As String
+Dim directory As String
+Dim dir As String
+Dim optndirectory As String
+Application.DisplayAlerts = False
+logdirectory = "C:\Users\asus\Dropbox\Outlines\MTAUTO-PYTHON\Logs\"
+directory = "C:\Users\asus\Dropbox\Outlines\MTAUTO-PYTHON\Trades_&_Plays\"
+dir = "C:\Users\asus\Documents\Quant\Database\"
+optndirectory = "C:\Users\asus\Dropbox\Outlines\MTAUTO-PYTHON\Option_Data\"
+Set tnpsht = Workbooks("TRADES & PLAYS REPORT").Sheets("TRADES & PLAYS REPORT")
+'Workbooks.Open logdirectory & "Trades_&_Plays_Log"
+Set tnplog = Workbooks("Trades_&_Plays_Log").Sheets(1)
+'Workbooks.Open logdirectory & "TnPRunLog"
+Set tnprunlog = Workbooks("TnPRunLog").Sheets(1)
+r = tnpsht.Cells(tnpsht.Rows.Count, "A").End(xlUp).Row
+
+
+For s = 27 To r Step 21
+    If tnpsht.Cells(s, 9).Value = tnplog.Cells(t, 1).Value Then
+        traderow = s - 4
+        Exit For
+    End If
+Next
+
+Debug.Print traderow, r, tnpsht.Cells(s, 9).Value, traderow, tnplog.Cells(t, 1).Value
+symb = tnpsht.Cells(traderow, 8).Value
+Workbooks.Open (dir & symb & "\Stock\" & symb & ".csv")
+Set stk = Workbooks(symb).Sheets(1)
+rs = stk.Cells(stk.Rows.Count, "A").End(xlUp).Row
+
+For k = 1 To 10
+    If stk.Cells(1, k).Value = "Date" Then
+        Exit For
+    End If
+Next
+
+For os = 1 To 10
+    If stk.Cells(1, os).Value = "Open" Then
+        Exit For
+    End If
+Next
+
+For hs = 1 To 10
+    If stk.Cells(1, hs).Value = "High" Then
+        Exit For
+    End If
+Next
+
+For ls = 1 To 10
+    If stk.Cells(1, ls).Value = "Low" Then
+        Exit For
+    End If
+Next
+
+For cs = 1 To 10
+    If stk.Cells(1, cs).Value = "Close" Then
+        Exit For
+    End If
+Next
+
+D1 = tnplog.Cells(t, 3).Value
+Debug.Print traderow, k, os, hs, ls, cs, D1
+For i = 1 To rs
+    If stk.Cells(i, k).Value = D1 Then
+        stk.Range(stk.Cells(i, os), stk.Cells(rs, os)).Copy
+        tnpsht.Range("K" & traderow).PasteSpecial xlPasteValues
+        stk.Range(stk.Cells(i, hs), stk.Cells(rs, hs)).Copy
+        tnpsht.Range("L" & traderow).PasteSpecial xlPasteValues
+        stk.Range(stk.Cells(i, ls), stk.Cells(rs, ls)).Copy
+        tnpsht.Range("M" & traderow).PasteSpecial xlPasteValues
+        stk.Range(stk.Cells(i, cs), stk.Cells(rs, cs)).Copy
+        tnpsht.Range("N" & traderow).PasteSpecial xlPasteValues
+        Exit For
+    End If
+Next
+
+If tnpsht.Cells(traderow + 2, 5).Value = 1 Then
+    Debug.Print "option symbol.."
+    rr = tnplog.Cells(tnplog.Rows.Count, "A").End(xlUp).Row
+    For td = 1 To rr
+        If tnpsht.Cells(traderow + 4, 9).Value = tnplog.Cells(td, 1).Value Then
+            tnpsht.Cells(traderow, 9).Value = tnplog.Cells(td, 5).Value
+            optndir = optndirectory & symb & "\" & tnplog.Cells(t, 5).Value & ".csv"
+            tnpsht.Cells(traderow + 2, 5).Value = "Option Symbol Generated"
+            GoTo Copy_Option_Data
+            Exit For
+        Else
+            tnpsht.Cells(traderow, 9).Value = "No Option Found"
+        End If
+    Next
+End If
+
+
+    'center = Round(tnpsht.Cells(r + 2, 11).Value, 0)
+    'stx = tnpsht.Cells(r + 3, 10).Value
+    'min_exp = DateAdd("d", 20, tnpsht.Cells(r + 1, 10).Value)
+    'max_exp = DateAdd("d", 40, tnpsht.Cells(r + 1, 10).Value)
+    'Exp = DateAdd("d", 30, tnpsht.Cells(r + 1, 10).Value)
+    
+    'optndir = directory & symb & "\Options\" & symb & "_" & Year(Exp) & tnpsht.Cells(r + 1, 10).Value & "s.csv"
+    'Debug.Print optndir
+    'Workbooks.Open optndir
+    'Set optn = Workbooks(Replace(opt, ".csv", "")).Sheets(1)
+    'exxxp = nearest_date(optn, Exp)
+    'strike = getclosest(optn.Range("E:E"), Round(center * (100 + stx), 0))
+    
+    'option_symbol = exxxp & "," & tnpsht.Cells(r + 1, 10).Value & "," & strike & "," & symb
+    'tnpsht.Cells(r + 1, 9).Value = option_symbol
+    'GoTo Copy_Option_Data
+
+
+Copy_Option_Data:
+option_symbol = tnpsht.Cells(traderow, 9).Value
+optndir = optndirectory & symb & "\" & tnpsht.Cells(traderow, 9).Value & ".csv"
+Debug.Print optndir
+Workbooks.Open (optndir)
+Set optn = Workbooks(option_symbol).Sheets(1)
+ro = optn.Cells(optn.Rows.Count, "A").End(xlUp).Row
+
+
+For ex = 1 To 20
+    If optn.Cells(1, ex).Value = "expiration" Then
+        Exit For
+    End If
+Next
+
+
+For k = 1 To 20
+    If optn.Cells(1, k).Value = "quote_date" Then
+        Exit For
+    End If
+Next
+
+For o = 1 To 20
+    If optn.Cells(1, o).Value = "open" Then
+        Exit For
+    End If
+Next
+
+For h = 1 To 20
+    If optn.Cells(1, h).Value = "high" Then
+        Exit For
+    End If
+Next
+
+For l = 1 To 20
+    If optn.Cells(1, l).Value = "low" Then
+        Exit For
+    End If
+Next
+
+For c = 1 To 20
+    If optn.Cells(1, c).Value = "close" Then
+        Exit For
+    End If
+Next
+
+For v = 1 To 20
+    If optn.Cells(1, v).Value = "trade_volume" Then
+        Exit For
+    End If
+Next
+    
+Debug.Print o, h, l, c, v
+
+For i = 1 To ro
+    If optn.Cells(i, k).Value = D1 Then
+        optn.Range(optn.Cells(i, o), optn.Cells(ro, o)).Copy
+        tnpsht.Range("Y" & traderow).PasteSpecial xlPasteValues
+        optn.Range(optn.Cells(i, h), optn.Cells(ro, h)).Copy
+        tnpsht.Range("Z" & traderow).PasteSpecial xlPasteValues
+        optn.Range(optn.Cells(i, l), optn.Cells(ro, l)).Copy
+        tnpsht.Range("AA" & traderow).PasteSpecial xlPasteValues
+        optn.Range(optn.Cells(i, c), optn.Cells(ro, c)).Copy
+        tnpsht.Range("AB" & traderow).PasteSpecial xlPasteValues
+        optn.Range(optn.Cells(i, v), optn.Cells(ro, v)).Copy
+        tnpsht.Range("AC" & traderow).PasteSpecial xlPasteValues
+        Exit For
+    End If
+Next
+
+Workbooks(tnpsht.Cells(traderow, 9).Value & ".csv").Close (False)
+Workbooks(symb & ".csv").Close (False)
+
+End Sub
+    
+        
+Sub LCR_Paster(d As Date, j As Integer)
+'j = trade row number
+
+Dim tnpsht As Worksheet
+Dim lcr As Worksheet
+'Dim temp As Worksheet
+
+Dim lcrdir As String
+Dim dir As String
+Dim symb As String
+Dim opt As String
+Dim strike As String
+
+Dim c As Integer
+Dim r As Integer
+Dim k As Integer
+Dim bp As Integer
+Dim sp As Integer
+Dim st As Integer
+
+Dim sell As Integer
+
+Dim i As Integer
+
+Dim t As Integer
+
+Dim s As String
+Dim sellary As String
+Application.DisplayAlerts = False
+
+dir = "C:\Users\asus\Dropbox\Outlines\MTAUTO-PYTHON\Level_Class_Reports"
+
+Set tnpsht = Workbooks("TRADES & PLAYS REPORT").Sheets("TRADES & PLAYS REPORT")
+
+lcrdir = dir & "\" & Format(d, "yyyy-mm-dd") & "\" & "Level_Class_Report_" & Format(d, "yyyy_mm_dd") & ".csv"
+Debug.Print lcrdir
+Workbooks.Open (lcrdir)
+Set lcr = Workbooks("Level_Class_Report_" & Format(d, "yyyy_mm_dd")).Sheets(1)
+r = lcr.Cells(lcr.Rows.Count, "A").End(xlUp).Row
+c = lcr.Cells(1, Columns.Count).End(xlToLeft).Column
+symb = tnpsht.Cells(j, 8).Value
+opt = tnpsht.Cells(j, 10).Value
+strike = tnpsht.Cells(j + 2, 10).Value
+
+With lcr.Range("B1")
+    Debug.Print tnpsht.Cells(j, 8).Value, tnpsht.Cells(j, 10).Value, tnpsht.Cells(j + 2, 10).Value
+    .AutoFilter , field:=2, Criteria1:=symb, VisibleDropDown:=True 'Symbol
+    .AutoFilter , field:=3, Criteria1:=opt, VisibleDropDown:=True 'Option
+    .AutoFilter , field:=4, Criteria1:=strike, VisibleDropDown:=True 'Strike
+End With
+
+
+
+
+sName = "temp"
+Worksheets.Add
+ActiveSheet.Name = sName
+Set temp = Worksheets(sName)
+lcr.Range(lcr.Cells(1, 1), lcr.Cells(r, c)).SpecialCells(xlCellTypeVisible).Copy
+temp.Range("A1").PasteSpecial xlPasteValues
+r = temp.Cells(temp.Rows.Count, "A").End(xlUp).Row
+Debug.Print r
+k = j + 1
+temp.Range(temp.Cells(1, 5), temp.Cells(r, 5)).AdvancedFilter Action:=xlFilterCopy, CopyToRange:=tnpsht.Range("D" & (k)), Unique:=True
+
+For k = 1 To 10
+    If lcr.Cells(1, k).Value = "Strategy_Formula" Then
+        Exit For
+    End If
+Next
+
+
+
+For bp = 1 To 100
+    If lcr.Cells(1, bp).Value = "Buy_Target_%" Then
+        Exit For
+    End If
+Next
+
+For st = 1 To 100
+    If lcr.Cells(1, st).Value = "Sell_Target_%" Then
+        Exit For
+    End If
+Next
+Debug.Print st, bp
+
+For i = 0 To 19
+    If tnpsht.Cells(j + i, 42).Value <> "" Then
+        'Debug.Print tnpsht.Cells(j + i, 42).Value
+        s = tnpsht.Cells(j + i, 42).Value
+        sellary = Split(s, ".")(0)
+        sell = Split(sellary, "/")(1)
+        tnpsht.Cells(j + i, 43).Value = Split(s, ",")(2) 'InStr(0, tnpsht.Cells(j + i, 42).Value, "EX") ', 3)
+        
+        If st > 40 Then
+            For st = 1 To 100
+                    Debug.Print lcr.Cells(1, st).Value, "Win_Period_" & sell & "th"
+                    If lcr.Cells(1, st).Value = "Win_Period_" & sell & "th" Then
+                        Debug.Print "Found Sell"
+                        Exit For
+                    End If
+            Next
+            
+        End If
+
+
+        
+        
+        For t = 1 To r
+            If temp.Cells(t, k).Value = s Then
+                Debug.Print lcr.Cells(t, bp).Value, temp.Cells(t, st).Value
+                tnpsht.Cells(j + i, 44).Value = temp.Cells(t, bp).Value
+                tnpsht.Cells(j + i, 46).Value = temp.Cells(t, st).Value
+                temp.Range(temp.Cells(t, 2), temp.Cells(t, c)).Copy
+                tnpsht.Cells(j + i, 49).PasteSpecial xlPasteValues
+            End If
+        Next
+
+    End If
+Next
+
+Worksheets(sName).Delete
+Workbooks("Level_Class_Report_" & Format(d, "yyyy_mm_dd")).Close (False)
+
+End Sub
+        
+Function nearest_date(sht As Worksheet, dat As Date)
+    Dim b As Range, lr As Long, iMaxDiff As Long, d As Long, fndDate As Date
+
+    With sht  'set this worksheet properly!
+        With .Range(.Cells(2, 2), .Cells(Rows.Count, 2).End(xlUp))
+            iMaxDiff = Application.Min(Abs(Application.Max(.Cells) - Date), Abs(Date - Application.Min(.Cells)))
+            For d = 0 To iMaxDiff
+                If CBool(Application.CountIf(.Cells, Date + d)) Then
+                    fndDate = Date + d
+                    Exit For
+                ElseIf CBool(Application.CountIf(.Cells, Date - d)) Then
+                    fndDate = Date - d
+                    Exit For
+                End If
+            Next d
+            Set b = .Find(What:=fndDate, After:=Range("B6"), LookIn:=xlFormulas, _
+                          LookAt:=xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+                          MatchCase:=False, SearchFormat:=False)
+        nearest_date = b
+        End With
+    End With
+End Function
+
+Function getclosest(ByVal rng As Range, tgt As Double) As Double
+    
+    t = WorksheetFunction.Max(rng)
+    For Each r In rng
+        u = Abs(r - tgt)
+        If u < t Then
+            t = u
+            getclosest = r
+        End If
+    Next
+End Function
