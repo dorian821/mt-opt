@@ -1,0 +1,15 @@
+start = date
+report_date = date
+end = dt.date.today() - dt.timedelta(days=30)
+
+reportcolumns = 
+
+def tnp_summary(opt_data):
+  report = pd.DataFrame(index=np.arange(1),columns=reportcolumns)
+  report
+  report[´Target_Buy_Percentage´] =
+  report[´Entry?´] =
+  report[´Trade_Max´] =
+  report[´Profit/Loss´] =
+  report[´Exit_Percentage´] =
+  
