@@ -3,5 +3,7 @@ iD length is from 1-x and should be descriptive enough to identify w >= .9 given
 syntax = indc1_name.value,indc2_name.value,...,indcx_name.value
 
 
-backtesting:
-  for all tdays in range find level 1 iDs generated on that day and 
+backtesting == forward-testing
+  for all tdays in range find level 1 iDs generated on that day and forward-test this indication ´til end of global tday range
+  what is the % bw/fw?
+  is there periodicity?
