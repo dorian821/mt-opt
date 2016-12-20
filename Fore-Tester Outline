@@ -1,0 +1,4 @@
+Generate MTAuto LCR for every day in a given range
+For all indicated trades on each day generate 1 line summary of the trade´s performance 
+concatenate all trade summaries chronologically
+calculate cumsum of acct-bal given the trades PnL performance
