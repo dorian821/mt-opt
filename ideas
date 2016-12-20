@@ -1,0 +1,1374 @@
+import pandas as pd
+import numpy as np
+import os
+import datetime as dt
+import pandas_datareader.data as web
+from yahoo_finance import Share
+import scipy as sp
+
+
+def stock_updater(symb,data):
+	d = dt.date.today()-dt.timedelta(days=1)
+	stockcolumns = ['Open','High','Low','Close','Volume','Adj Close']
+	stk = Share(symb)
+	stock = pd.Series({'Open':stk.get_open(),'High': stk.get_days_high(),'Low': stk.get_days_low(),'Close': stk.get_price(),'Volume': stk.get_volume(), 'Adj Close':stk.get_price()}, name=d)
+	data = data.append(stock)
+	return data
+	
+def SMA(data,column,ndays): 
+	s = pd.Series(data[column].rolling(center=False,window=ndays).mean(), name='SMA_' + str(ndays)) 
+	data = data.join(s)
+	return data
+	
+#Slope
+def three_linest(y,x=np.arange(3),deg=1):
+	l = np.polyfit(y=y, x=x, deg=1)[0]
+	return l
+
+def five_linest(y,x=np.arange(5),deg=1):
+	l = np.polyfit(y=y, x=x, deg=1)[0]
+	return l
+	
+def slope(data,series, ndays, name):
+	name = name + str(ndays)
+	slope, intercept, r_value, p_value, std_err = pd.Series(pd.rolling_apply(arg=series, func=sp.stats.linregress(y=np.datetime64(series.index), x=series), window=3), name=name)
+	data = data.join(slope)
+	return data
+	
+def sloped(data,series, ndays, name):
+	name = name + str(ndays)
+	slope, intercept, r_value, p_value, std_err = pd.Series(pd.rolling_apply(arg=series, func=np.polyfit(y=np.datetime64(series.index), x=series), window=3), name=name)
+	data = data.join(slope)
+	data = data.fillna(value=0)
+	return data
+	
+	#three_linest
+ 
+# Exponentially-weighted Moving Average 
+def EMA(data, ndays): 
+	EMA = pd.Series(pd.ewma(data['Close'], span = ndays, min_periods = ndays - 1, name = 'EMA_' + str(ndays)) )
+	return EMA
+
+#Stochastics 
+#D1_%K (14Per)
+def FSTOCH(data, ndays=14):
+	l = pd.Series(pd.rolling_min(data['Low'], ndays), name=str(ndays) + '_Min_Low')
+	h = pd.Series(pd.rolling_max(data['High'], ndays), name=str(ndays) + '_Max_Hi')
+	k = pd.Series(100 * (data['Close'] - l) / (h - l), name = '%K')
+	data = data.join(k)
+	data = data.join(l)
+	data = data.join(h)
+	data = data.fillna(value=0)
+	return data
+	
+def SLSTOCH(data, ndays=3):
+	d = pd.Series(data['%K'].rolling(center=False,window=ndays).mean(), name='%D')
+	data = data.join(d)
+	data = data.fillna(value=0)
+	return data
+	
+def fstoch(lowp, highp, closep, period=14):
+    """ calculate slow stochastic
+    Fast stochastic calculation
+    %K = (Current Close - Lowest Low)/(Highest High - Lowest Low) * 100
+    %D = 3-day SMA of %K
+    """
+    low_min = pd.rolling_min(lowp, period)
+    high_max = pd.rolling_max(highp, period)
+    k_fast = 100 * (closep - low_min)/(high_max - low_min)
+    k_fast = k_fast.dropna()
+    return k_fast
+	
+def sstoch(k,period):
+	d = SMA(stk,k, period)
+	data = data.fillna(value=0)
+	return d
+
+#D1_DIR
+def STOCHDIR(data):
+	d = pd.Series(data['%K'] - data['%D'], name='D1_DIR')
+	data = data.join(d)
+	data = data.fillna(value=0)
+	return data
+
+#D1_FAUXSTO
+def FAUXSTO(data):
+	d = pd.Series(data['%K'] - data['%K'].shift(+1)*(data['%D'] - data['%D'].shift(+1)), name='D1_FAUXSTO')
+	data = data.join(d)
+	data = data.fillna(value=0)
+	return data
+
+#ABSOL_UP_D1_STO
+def STOCHABSOLUP(data):
+	d = pd.Series((data['D1_FAUXSTO'] > 0) & (data['D1_DIR'] > 0), name='ABSOL_UP_D1_STO')
+	data = data.join(d)
+	data = data.fillna(value=0)
+	return data
+
+#FRST_UP_OR_DWN_D1_%K_3PER_SLP
+def K_UP_DOWN(data):
+	km = pd.Series(pd.rolling_apply(arg=data['%K'],func=three_linest,window=3),name='%K_3PER_SLP')
+	data = data.join(km)
+	up = pd.Series(((data['%K_3PER_SLP'] > 0) & (data['%K_3PER_SLP'].shift(+1) < 0)), name='FIRST_UP_D1_%K_3PER_SLP')
+	data = data.join(up)
+	down = pd.Series(((km < 0) & (km.shift(+1) > 0)), name='FIRST_DOWN_D1_%K_3PER_SLP')
+	data = data.join(down)
+	return data
+
+
+#CCI
+def CCI(data, ndays): 
+	TP = (data['High'] + data['Low'] + data['Close']) / 3 
+	CCI = pd.Series(((TP - TP.rolling(center=False,window=ndays).mean())/ (0.015 * pd.rolling_std(TP, ndays))), name='CCI')
+	name = 'CCI'
+	data = data.join(CCI)
+	data = data.fillna(value=0)	
+	return data
+	
+def TYP(data):
+	typ = pd.Series(((data['High'] + data['Low'] + data['Close']) / 3), name='Typical')
+	data = data.join(typ)
+	data = data.fillna(value=0)
+	return data
+
+#CCI Divergence
+def CCI_DIVERG_T(data):
+	ccislope = pd.rolling_apply(arg=data['CCI'],func=three_linest,window=3)
+	typslope =  pd.rolling_apply(arg=data['Typical'],func=three_linest,window=3)
+	updiverg = pd.Series(((ccislope > 0) & (typslope < 0)), name='CCI_UP_DIVERGENCE_3')
+	data = data.join(updiverg)
+	downdiverg = pd.Series(((ccislope < 0) & (typslope > 0)), name='CCI_DOWN_DIVERGENCE_3')
+	data = data.join(downdiverg)
+	data = data.fillna(value=0)
+	return data
+	
+def CCI_DIVERG_F(data):
+	ccislope = pd.rolling_apply(arg=data['CCI'],func=five_linest,window=5)
+	typslope =  pd.rolling_apply(arg=data['Typical'],func=five_linest,window=5)
+	updiverg = pd.Series(((ccislope > 0) & (typslope < 0)), name='CCI_UP_DIVERGENCE_5')
+	data = data.join(updiverg)
+	downdiverg = pd.Series(((ccislope < 0) & (typslope > 0)), name='CCI_DOWN_DIVERGENCE_5')
+	data = data.join(downdiverg)
+	data = data.fillna(value=0)
+	return data
+
+
+#Bollinger Bands
+def BBANDS(data, ndays, nstdev):
+ 
+	MA = pd.Series(data['Close'].rolling(center=False,window=ndays).mean())
+	SD = pd.Series(pd.rolling_std(data['Close'], ndays))
+	b1 = MA + (nstdev * SD)
+	B1 = pd.Series(b1, name = 'Upper_BollingerBand') 
+	data = data.join(B1) 
+	b2 = MA - (nstdev * SD)
+	B2 = pd.Series(b2, name = 'Lower_BollingerBand') 
+	data = data.join(B2)
+	data = data.fillna(value=0)
+	return data
+ 
+#Bollinger Band Pinch XPAND
+def BB_PINCH_XPAND(data):
+	bp = pd.Series((data['Upper_BollingerBand'] > data['Upper_BollingerBand'].shift(+1)) & (data['Lower_BollingerBand'] < data['Lower_BollingerBand'].shift(+1)),name='BBANDS_PINCH')
+	data = data.join(bp)
+	bx = pd.Series((data['Upper_BollingerBand'] < data['Upper_BollingerBand'].shift(+1)) & (data['Lower_BollingerBand'] > data['Lower_BollingerBand'].shift(+1)),name='BBANDS_XPAND')
+	data = data.join(bx)
+	data = data.fillna(value=0)
+	return data
+ 
+#Blowest
+def LLOWEST(data, ndays):
+	l = pd.Series(pd.rolling_min(data['Low'],ndays), name='Lowest_Low_in_' + str(ndays))
+	data = data.join(l)
+	data = data.fillna(value=0)
+	return data
+	
+def HLOWEST(data, ndays):
+	l = pd.Series(pd.rolling_min(data['High'],ndays), name = 'Lowest_Hi_in_' + str(ndays))
+	data = data.join(l)
+	data = data.fillna(value=0)
+	return data
+	
+def BLOWEST(data, ndays): #not named, must be explicitly assigned to column ['BLOWEST_' + ndays]
+	bl = pd.Series((data['Lowest_Hi_in_' + str(ndays)] == data['High']) & (data['Low'] == data['Lowest_Low_in_' + str(ndays)]), name = 'BLOWEST_' + str(ndays))
+	data = data.join(bl)
+	data = data.fillna(value=0)
+	return data
+	
+#D1_H_LO_LOWEST_IN_X
+def HLLOWESTIN(data, ndays):
+	loin = pd.rolling_min(data['Low'], ndays)
+	hloin = pd.rolling_min(data['High'], ndays)
+	hlin = pd.Series((hloin == data['High']) & (data['Low'] == loin), name = 'D1_H_LO_LOWEST_IN_' + str(ndays))
+	data = data.join(hlin)
+	data = data.fillna(value=0)
+	return data
+	
+def COUNT_BLOWEST(data, ndays, pdays):
+	ct = pd.DataFrame(data=np.where(data[''.join(['BLOWEST_' + str(ndays)])] == True,1,0),index=data.index,columns={''.join(['COUNT_BLOWEST_' + str(ndays)])})
+	cb = ct.rolling(center=False, window=pdays).sum() #.name('COUNT_BLOWEST_' + str(ndays))
+	data = data.join(cb)
+	data = data.fillna(value=0)
+	return data
+
+	cb = pd.rolling_apply(arg=data, window=ndays, func=data['BLOWEST_' + str(ndays)][data['BLOWEST_' + str(ndays)] == True].count())
+
+
+#ANN_LO_BY_DEFLAT
+def ANNLOW(data, ndays=250):
+	l = pd.Series(pd.rolling_min(data['Low'],ndays, min_periods=1), name='Annual_Low_250_Days')
+	data = data.join(l)
+	return data
+
+def ANNLOWDEFLAT(data, ndays=250):
+	ald = pd.Series((data['Annual_Low_250_Days'].shift(+1) > data['Annual_Low_250_Days']) & (data['Annual_Low_250_Days'] == data['Low']), name='ANN_LO_BY_DEFLAT')
+	data = data.join(ald)
+	return data	
+
+def ANNLOWATTRIT(data, ndays=250):
+	alt = pd.Series((data['Annual_Low_250_Days'].shift(+1) < data['Annual_Low_250_Days']) & (data['Annual_Low_250_Days'] != data['Low']), name='ANN_LO_BY_DEFLAT')
+	data = data.join(alt)
+	return data
+	
+#OC - Commodity Channel Indicator?
+
+#RSI
+def RSI(data, ndays):
+	close = data['Close']
+	delta = close.diff()
+	delta = delta.fillna(method= 'backfill')
+	up, down = delta.copy(), delta.copy()
+	up[up < 0] = 0
+	down[down > 0] = 0
+	roll_up1 = pd.stats.moments.ewma(up, ndays)
+	roll_down1 = pd.stats.moments.ewma(down.abs(), ndays)
+	RS1 = roll_up1 / roll_down1
+	RSI1 = 100.0 - (100.0 / (1.0 + RS1))
+	RSI = pd.Series(RSI1, name='RSI_' + str(ndays))
+	data = data.join(RSI)
+	return data
+	
+#Extras
+# Ease of Movement 
+def EVM(data, ndays): 
+	dm = ((data['High'] + data['Low'])/2) - ((data['High'].shift(1) + data['Low'].shift(1))/2)
+	br = (data['Volume'] / 100000000) / ((data['High'] - data['Low']))
+	EVM = dm / br 
+	EVM_MA = pd.Series(pd.rolling_mean(EVM, ndays), name = 'EVM') 
+	data = data.join(EVM_MA) 
+	return data 
+
+current_time = dt.datetime.now()
+last_friday = (current_time.date()
+    - dt.timedelta(days=current_time.weekday())
+    + dt.timedelta(days=4, weeks=-1))
+
+#get stock data
+start = pd.to_datetime('2004-01-02', infer_datetime_format=True)
+end =  dt.datetime.today() - dt.timedelta(1)
+symbs = ('QQQ','^VIX','SPY','AAPL','IWM') #symbs = ('^VIX','VXX','XIV','SPY','AAPL','QQQ','IWM','X','NFLX','AMZN','GLD','GDX','C')
+for symb in symbs:
+	stk = web.DataReader(symb, 'yahoo', start, end)
+	#stk = stock_updater(symb,stk)
+	targetdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Data_&_Calcs\\'
+	os.makedirs(targetdir, exist_ok=True)
+		
+	stk = TYP(stk)
+	stk = SMA(data=stk,column='Close',ndays=5)
+	stk = SMA(data=stk,column='Close',ndays=10)
+	stk = SMA(data=stk,column='Close',ndays=20)
+	stk = SMA(data=stk,column='Close',ndays=50)
+	stk = SMA(data=stk,column='Close',ndays=100)
+	stk = SMA(data=stk,column='Close',ndays=200)
+	stk = BBANDS(stk, 20, 2)
+	stk = BB_PINCH_XPAND(stk)
+	stk = FSTOCH(stk, ndays=14)
+	stk = SLSTOCH(data=stk,ndays=3)
+	stk = STOCHDIR(stk)
+	stk = FAUXSTO(stk)
+	stk = STOCHABSOLUP(stk)
+	stk = K_UP_DOWN(stk)
+	stk = LLOWEST(stk, 20)
+	stk = HLOWEST(stk, 20)
+	stk = BLOWEST(stk, 20)
+	stk = HLLOWESTIN(stk, 20)
+	stk = COUNT_BLOWEST(stk,20,20)
+	stk = LLOWEST(stk, 5)
+	stk = HLOWEST(stk, 5)
+	stk = BLOWEST(stk, 5)
+	stk = HLLOWESTIN(stk, 5)
+	stk = COUNT_BLOWEST(stk,5,5)
+	stk = ANNLOW(stk)
+	stk = ANNLOWDEFLAT(stk)
+	#OC Commodity Channel
+	stk = CCI(stk, 14)
+	stk = CCI_DIVERG_T(stk)
+	stk = CCI_DIVERG_F(stk)
+	stk = RSI(stk,20)
+
+	pathdc = ''.join([targetdir,symb,'_Data&Calcs.csv'])
+	stk.to_csv(pathdc, mode='w',delimiter=',')
+
+
+	#Sort 1
+	if stk.ix[-1]['D1_H_LO_LOWEST_IN_20'] == True:
+		sort1 = stk[stk['D1_H_LO_LOWEST_IN_20'] == True]
+	else:
+		sort1 = ()
+	#Sort 2
+	if stk.ix[-1]['ANN_LO_BY_DEFLAT'] == True:
+		sort2 = stk[stk['ANN_LO_BY_DEFLAT'] == True]
+	else:
+		sort2 = []
+	#Sort 3 - I want to try this sort with slightly different criteria - i.e. to take only values that are within a .5 range regardless of their proximity to the edges. 
+	if (stk.ix[-1]['%K'] <= 95) & (stk.ix[-1]['%K'] >= 5):
+		sort3a = stk[((stk['%K'] < (stk.ix[-1]['%K'] + 5)) & (stk['%K'] > (stk.ix[-1]['%K'] - 5)))]
+	elif stk.ix[-1]['%K'] < 5:
+		sort3a = stk[stk['%K'] < 1]
+	elif stk.ix[-1]['%K'] > 95:
+		sort3a = stk[stk['%K'] > 9]
+	if 	stk.ix[-1]['D1_DIR'] > 0:
+		sort3b = sort3a[sort3a['D1_DIR'] > 0]
+	elif stk.ix[-1]['D1_DIR'] < 0:
+		sort3b = sort3a[sort3a['D1_DIR'] < 0]
+	if 	stk.ix[-1]['D1_FAUXSTO'] > 0:
+		sort3 = sort3b[sort3b['D1_FAUXSTO'] > 0]
+	elif stk.ix[-1]['D1_FAUXSTO'] < 0:
+		sort3 = sort3b[sort3b['D1_FAUXSTO'] < 0]
+	#Sort 4 - 'ABSOL_UP_D1_STO'
+	if stk.ix[-1]['ABSOL_UP_D1_STO'] == True:
+		sort4a = stk[stk['ABSOL_UP_D1_STO'] == True]
+		if (stk.ix[-1]['%K'] <= 95) & (stk.ix[-1]['%K'] >= 5):
+			sort4 = sort4a[((sort4a['%K'] < (stk.ix[-1]['%K'] + 5)) & (sort4a['%K'] > (stk.ix[-1]['%K'] - 5)))]
+		elif stk.ix[-1]['%K'] < 5:
+			sort4 = sort4a[sort4a['%K'] < 1]
+		elif stk.ix[-1]['%K'] > 95:
+			sort4 = sort4a[sort4a['%K'] > 9]
+	else:
+		sort4 = []
+	#Sort 8
+	if stk.ix[-1]['FIRST_UP_D1_%K_3PER_SLP'] == True:
+		sort8a = stk[stk['FIRST_UP_D1_%K_3PER_SLP'] == True]
+		if (stk.ix[-1]['%K'] <= 95) & (stk.ix[-1]['%K'] >= 5):
+			sort8 = sort8a[((sort8a['%K'] < (stk.ix[-1]['%K'] + 5)) & (sort8a['%K'] > (stk.ix[-1]['%K'] - 5)))]
+		elif stk.ix[-1]['%K'] < 5:
+			sort8 = sort8a[sort8a['%K'] < 1]
+		elif stk.ix[-1]['%K'] > 95:
+			sort8 = sort8a[sort8a['%K'] > 9]
+	else:
+		sort8 = []
+	#Sort 9
+	if stk.ix[-1]['FIRST_DOWN_D1_%K_3PER_SLP'] == True:
+		sort9a = stk[stk['FIRST_DOWN_D1_%K_3PER_SLP'] == True]
+		if (stk.ix[-1]['%K'] <= 95) & (stk.ix[-1]['%K'] >= 5):
+			sort9 = sort9a[((sort9a['%K'] < (stk.ix[-1]['%K'] + 5)) & (sort9a['%K'] > (stk.ix[-1]['%K'] - 5)))]
+		elif stk.ix[-1]['%K'] < 5:
+			sort9 = sort9a[sort9a['%K'] < 1]
+		elif stk.ix[-1]['%K'] > 95:
+			sort9 = sort9a[sort9a['%K'] > 9]	
+	else:
+		sort9 = []
+	#Sort 10 ?
+	#Sort 12 ?
+	#Sort 16 - Generate SMA Tests
+	#Sort 18
+	#Sort 19
+	#Sort 20
+	if (stk.ix[-1]['COUNT_BLOWEST_5'] > 0) & (stk.ix[-1]['D1_H_LO_LOWEST_IN_5'] == True):
+		sort20 = stk[stk['COUNT_BLOWEST_5'] == stk.ix[-1]['COUNT_BLOWEST_5']]
+	else: 
+		sort20 = []
+	#Sort 22
+	if (stk.ix[-1]['COUNT_BLOWEST_20'] > 0)  & (stk.ix[-1]['D1_H_LO_LOWEST_IN_20'] == True):
+		sort22 = stk[stk['COUNT_BLOWEST_20'] == stk.ix[-1]['COUNT_BLOWEST_20']]
+	else: 
+		sort22 = []
+	#Sort 25
+	if stk.ix[-1]['BBANDS_PINCH'] == True:
+		sort25a = stk[stk['BBANDS_PINCH'] == True]
+		if (stk.ix[-1]['%K'] <= 95) & (stk.ix[-1]['%K'] >= 5):
+			sort25a = stk[((stk['%K'] < (stk.ix[-1]['%K'] + 5)) & (stk['%K'] > (stk.ix[-1]['%K'] - 5)))]
+		elif stk.ix[-1]['%K'] < 5:
+			sort25a = stk[stk['%K'] < 1]
+		elif stk.ix[-1]['%K'] > 95:
+			sort25a = stk[stk['%K'] > 9]
+		if 	stk.ix[-1]['D1_DIR'] > 0:
+			sort25b = sort25a[sort25a['D1_DIR'] > 0]
+		elif stk.ix[-1]['D1_DIR'] < 0:
+			sort25b = sort25a[sort25a['D1_DIR'] < 0]
+		if 	stk.ix[-1]['D1_FAUXSTO'] > 0:
+			sort25 = sort25b[sort25b['D1_FAUXSTO'] > 0]
+		elif stk.ix[-1]['D1_FAUXSTO'] < 0:
+			sort25 = sort25b[sort25b['D1_FAUXSTO'] < 0]
+	else: 
+		sort25 = []
+
+	#Sort 25x
+	if stk.ix[-1]['BBANDS_XPAND'] == True:
+		sort25xa = stk[stk['BBANDS_XPAND'] == True]
+		if (stk.ix[-1]['%K'] <= 95) & (stk.ix[-1]['%K'] >= 5):
+			sort25xa = stk[((stk['%K'] < (stk.ix[-1]['%K'] + 5)) & (stk['%K'] > (stk.ix[-1]['%K'] - 5)))]
+		elif stk.ix[-1]['%K'] < 5:
+			sort25xa = stk[stk['%K'] < 1]
+		elif stk.ix[-1]['%K'] > 95:
+			sort25xa = stk[stk['%K'] > 9]
+		if 	stk.ix[-1]['D1_DIR'] > 0:
+			sort25xb = sort25xa[sort25xa['D1_DIR'] > 0]
+		elif stk.ix[-1]['D1_DIR'] < 0:
+			sort25xb = sort25xa[sort25xa['D1_DIR'] < 0]
+		if 	stk.ix[-1]['D1_FAUXSTO'] > 0:
+			sort25x = sort25xb[sort25xb['D1_FAUXSTO'] > 0]
+		elif stk.ix[-1]['D1_FAUXSTO'] < 0:
+			sort25x = sort25xb[sort25xb['D1_FAUXSTO'] < 0]	
+	else: 
+		sort25x = []
+	#Sort 31 - CCI Updiv - Perhaps add Sort 3 to this. Depending upon results that it generates independently. Also check divergence based upon slopes of different periods: 3, 5, 7, 10, 14
+	if stk.ix[-1]['CCI_UP_DIVERGENCE_3'] == True:
+		sort31 = stk[stk['CCI_UP_DIVERGENCE_3'] == True]
+	else:
+		sort31 = []
+	#Sort 32 - CCI Downdiv
+	if stk.ix[-1]['CCI_DOWN_DIVERGENCE_3'] == True:
+		sort32 = stk[stk['CCI_DOWN_DIVERGENCE_3'] == True]
+	else:
+		sort32 = []
+		
+	#Sort 33 - CCI Updiv - Perhaps add Sort 3 to this. Depending upon results that it generates independently. Also check divergence based upon slopes of different periods: 3, 5, 7, 10, 14
+	if stk.ix[-1]['CCI_UP_DIVERGENCE_5'] == True:
+		sort33 = stk[stk['CCI_UP_DIVERGENCE_5'] == True]
+	else:
+		sort33 = []
+		
+	#Sort 34 - CCI Downdiv
+	if stk.ix[-1]['CCI_DOWN_DIVERGENCE_5'] == True:
+		sort34 = stk[stk['CCI_DOWN_DIVERGENCE_5'] == True]
+	else:
+		sort34 = []
+	#Sort 35 - RSI - Mean Reversion? Do like sort 3?
+
+	d = dt.datetime.today().date() - dt.timedelta(days=1) #modify to set to prior friday when run on the weekend, in the event is not run on saturday
+	
+	path = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Sort_Reports\\Sort_Data\\' + symb + '\\Presorts\\' + d.strftime('%Y-%m-%d') + '\\'
+	os.makedirs(path, exist_ok=True)
+
+	if len(sort1) > 0:
+		sort1.to_csv(path + symb + '_sort-01_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort2) > 0:
+		sort2.to_csv(path + symb + '_sort-02_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort3) > 0:
+		sort3.to_csv(path + symb + '_sort-03_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort4) > 0:
+		sort4.to_csv(path + symb + '_sort-04_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort8) > 0:
+		sort8.to_csv(path + symb + '_sort-08_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort9) > 0:
+		sort9.to_csv(path + symb + '_sort-09_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort20) > 0:
+		sort20.to_csv(path + symb + '_sort-20_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort22) > 0:
+		sort22.to_csv(path + symb + '_sort-22_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort25) > 0:
+		sort25.to_csv(path + symb + '_sort-25_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort31) > 0:
+		sort31.to_csv(path + symb + '_sort-31_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort32) > 0:
+		sort32.to_csv(path + symb + '_sort-32_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort33) > 0:
+		sort33.to_csv(path + symb + '_sort-33_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort34) > 0:
+		sort34.to_csv(path + symb + '_sort-34_' + d.strftime('%Y-%m-%d') + '.csv')
+	if len(sort1) > 0:
+		sort35.to_csv(path + symb + '_sort-35_' + d.strftime('%Y-%m-%d') + '.csv')
+
+		
+import pandas as pd
+import numpy as np
+import os
+from datetime import datetime
+import datetime as dt
+import calendar
+
+def next_monthlies(d): # must test len of option price history to ensure 1: that purchase is possible on d2 and 2: that there is at least 12 days of data
+	f = d + dt.timedelta(days=30)
+	g = d + dt.timedelta(days=60)
+	g = dt.date(g.year, g.month, 15)
+	f = dt.date(f.year, f.month, 15)
+	g = (g + dt.timedelta(days=(calendar.FRIDAY - g.weekday()) % 7))
+	f = (f + dt.timedelta(days=(calendar.FRIDAY - f.weekday()) % 7))
+	e = f - dt.timedelta(weeks=2)
+	return e,f,g
+	
+def next_weekday(date, weekday_target, weeks_ahead):
+	days_ahead = weekday_target - date.weekday()
+	if weeks_ahead > 0:
+		days_ahead += (7 * weeks_ahead)
+	return date + dt.timedelta(days=days_ahead)
+	
+def find_strike(array,value,movement):
+	array = array.unique()
+	array = np.sort(array, axis=0, kind='quicksort', order=None)
+	idx = np.abs(array-value).argmin()
+	stx = array[idx+movement]	
+	return stx
+	
+def nearest_exp(array,dat,start):
+	strt = dt.date(start.year, start.month, start.day)
+	aray = array.reset_index(drop=True)
+	idx = np.abs(aray-dat).argmin()
+	exp = aray[idx]
+	exp = dt.date(exp.year, exp.month, exp.day)
+	if ((exp - strt) < dt.timedelta(days=20)) & (len(aray) > (len(aray)-(idx+1))):
+		try:
+			exp = aray[(idx+1)]
+		except:
+			exp = aray[idx]
+	return exp
+	
+
+def option_finder(opt,symb,strike,t,start,min_exp,exp,max_exp,m,q): # open opt_key outside of func in begining of loop and pass df as argument
+	try:
+		opt = (opt[opt['expiration'] <= max_exp])
+		opt = (opt[opt['expiration'] >= min_exp])
+		opt = (opt[opt['quote_date'] >= start])
+		
+		stx = find_strike(opt['strike'],strike,m)
+		opt = (opt[opt['strike'] == stx])
+		opt.reset_index(drop=True, inplace=True)
+		if len(opt['expiration'].unique()) > 1:		
+			x = nearest_exp(opt['expiration'],exp,start)
+			opt = (opt[opt['expiration'] == x])
+		duples = opt['quote_date'].duplicated()
+		if duples.isin([True]).values.any():
+			opt = opt[duples == False]
+		
+		if q == 0:
+			opt = option_tester(opt,length=12,dat=start,t=t,strike=strike)
+		
+		option = ''.join([str(opt.loc[opt.index[0]]['expiration'].date()),',',t,',',str(stx),',',symb])
+		opt = opt[['underlying_symbol', 'root', 'expiration', 'strike', 'option_type',
+			 'open', 'high', 'low', 'close', 'trade_volume', 'bid_size_1545',
+			 'bid_1545', 'ask_size_1545', 'ask_1545', 'underlying_bid_1545',
+			 'underlying_ask_1545', 'implied_underlying_price_1545',
+			 'active_underlying_price_1545', 'implied_volatility_1545', 'delta_1545',
+			 'gamma_1545', 'theta_1545', 'vega_1545', 'rho_1545', 'bid_size_eod',
+			 'bid_eod', 'ask_size_eod', 'ask_eod', 'underlying_bid_eod',
+			 'underlying_ask_eod', 'vwap', 'open_interest', 'delivery_code']]
+	except: 
+		opt = 'NA'
+		option = 'NA'
+	return opt, option
+	
+def option_tester(opt,length,dat,t,strike):
+	opt.set_index('quote_date',inplace=True)
+	opt = opt.loc[dat:]
+	opx = opt[opt['open']!=0]
+	if (len(opx)<length) or (opx.index[0] != dat):
+		if t == 'c':
+			z = strike+1
+			opt = option_finder(symb=symb,strike=z,t='c',start=dat,min_exp=min_exp,exp=exp,max_exp=max_exp,m=x,q=1)
+		else:
+			z = strike-1
+			opt = option_finder(symb=symb,strike=z,t='p',start=dat,min_exp=min_exp,exp=exp,max_exp=max_exp,m=x,q=1)
+	return opt
+
+def mt_reporter(data,opt):
+	report = pd.DataFrame(index=np.arange(1))
+	report['Option_Symbol'] = opt
+	report['Trade_Date'] = data.index[0]
+	tddate = data.index[0]
+	data = data[1:20]
+	
+	data['mid_1545'] = (data['bid_1545'] + data['ask_1545'])/2
+	if len(data) < 19:
+		ix = pd.DatetimeIndex(start=data.index[-1] + dt.timedelta(days=1), end=data.index[-1] + dt.timedelta(days=19-len(data)), freq='D')
+		dx = pd.DataFrame(index=ix,columns=data.columns)
+		data = pd.concat([data,dx],axis=0)
+	data = data[['open','high','low','close','mid_1545','trade_volume']].replace(to_replace=0, value=np.nan).fillna(method='bfill',axis=1)
+	if data.ix[0]['open'] != 0:
+		d2op = data.ix[0]['open']
+		ds = np.arange(2,len(data)+2)
+		lolabels = ["D2Lo/D2op",	"D3Lo/D2op",	"D4Lo/D2op",	"D5Lo/D2op",	"D6Lo/D2op",	"D7Lo/D2op",	"D8Lo/D2op",	"D9Lo/D2op",	"D10Lo/D2op",	"D11Lo/D2op",	"D12Lo/D2op",	"D13Lo/D2op",	"D14Lo/D2op",	"D15Lo/D2op",	"D16Lo/D2op",	"D17Lo/D2op",	"D18Lo/D2op",	"D19Lo/D2op",	"D20Lo/D2op"]
+		hilabels = ["D2Hi/D2op",	"D3Hi/D2op",	"D4Hi/D2op",	"D5Hi/D2op",	"D6Hi/D2op",	"D7Hi/D2op",	"D8Hi/D2op",	"D9Hi/D2op",	"D10Hi/D2op",	"D11Hi/D2op",	"D12Hi/D2op",	"D13Hi/D2op",	"D14Hi/D2op",	"D15Hi/D2op",	"D16Hi/D2op",	"D17Hi/D2op",	"D18Hi/D2op",	"D19Hi/D2op",	"D20Hi/D2op"]
+		loratios = pd.DataFrame(index=lolabels, columns=np.arange(1))
+		hiratios = pd.DataFrame(index=hilabels, columns=np.arange(1))
+		lows = data['low'].reshape(19,1)
+		highs = data['high'].reshape(19,1)
+		loratios[[0]] = lows/d2op
+		hiratios[[0]] = highs/d2op
+		
+		d2 = data.ix[1]
+		#d2 = d2[['open','high','low','close','bid_1545','ask_1545']].replace(to_replace=0, value=np.nan).fillna(method='bfill')
+		report['d2op'] = data.ix[0]['open']	
+		report['d2hi'] = data.ix[0]['high']
+		report['d2lo'] = data.ix[0]['low']
+		report['d2cl'] = data.ix[0]['close']
+		report['d2ivst'] = data.ix[0]['trade_volume']*d2op*10
+		per1 = data[1:5]
+		#per1 = per1[['open','high','low','close','bid_1545']].replace(to_replace=0, value=np.nan).fillna(method='bfill',axis=1)
+		#per1 = per1[['open','high','low','close']].resample('5D').agg({'open': 'first', 'high': 'max','low': 'min', 'close': 'last'}) #need to reformat, giving false values
+		report['per1op'] = per1.ix[0]['open']
+		per1op = per1.ix[0]['open']
+		report['per1hi'] = per1['high'].max()
+		report['per1lo'] = per1['low'].min()
+		report['per1cl'] = per1.ix[-1]['close']
+		report['per1ivst'] = data[2:6]['trade_volume'].mean()*per1op*10
+		per2 = data[5:10]
+		#per2 = per2[['open','high','low','close','bid_1545']].replace(to_replace=0, value=np.nan).fillna(method='bfill',axis=1)
+		#per2 = per2[['open','high','low','close']].resample('4D').agg({'open': 'first', 'high': 'max','low': 'min', 'close': 'last'})#need to reformat, giving false values
+		report['per2op'] = per2.ix[0]['open']
+		per2op = per2.ix[0]['open']
+		report['per2hi'] = per2['high'].max()
+		report['per2lo'] = per2['low'].min()
+		report['per2cl'] = per2.ix[-1]['close']
+		report['per2ivst'] = data[6:11]['trade_volume'].mean()*per2op*10
+		try:
+			per3 =  data.ix[10:]
+			#per3 = per3[['open','high','low','close','bid_1545']].replace(to_replace=0, value=np.nan).fillna(method='bfill',axis=1)
+			#per3 = per3[['open','high','low','close']].resample('11D').agg({'open': 'first', 'high': 'max','low': 'min', 'close': 'last'}) #need to reformat, giving false values
+			report['per3op'] = per3.ix[0]['open']
+			per3op = per3.ix[0]['open']
+			report['per3hi'] = per3['high'].max()
+			report['per3lo'] = per3['low'].min()
+			report['per3cl'] = per3.ix[-1]['close']
+			report['per3ivst'] = data[10:]['trade_volume'].mean()*per3op*10
+			report['Avg_Investible_Volume'] = (report['per3ivst']+report['per2ivst']+report['per1ivst']+report['d2ivst'])/4
+		except:
+			report['per3op'] = 'NA'
+			per3op = 'NA'
+			report['per3hi'] = 'NA'
+			report['per3lo'] = 'NA'
+			report['per3cl'] = 'NA'
+			report['per3ivst'] = 0
+			report['Avg_Investible_Volume'] = (report['per2ivst']+report['per1ivst']+report['d2ivst'])/3
+
+		report['Trade_Hi'] = hiratios[1:].max()
+		data.reset_index(drop=False,inplace=True)
+		report['Trade_Hi_Day'] = data.iloc[1:]['high'].idxmax() + 1 #np.max(report['per3hi'],report['per2hi'],report['per1hi'])
+		report['Trade_Lo'] = loratios[1:].min()
+		report['Trade_Hi_Day'] =data.iloc[1:]['low'].idxmin() + 1
+		report['per1hi_percent'] = report['per1hi']/d2op
+		report['per2hi_percent'] = report['per2hi']/d2op
+		report['per3hi_percent'] = report['per3hi']/d2op
+		report['per1lo_percent'] = report['per1lo']/d2op
+		report['per2lo_percent'] = report['per2lo']/d2op
+		report['per3lo_percent'] = report['per3lo']/d2op	
+		report['per1cl_percent'] = report['per1cl']/d2op
+		report['per2cl_percent'] = report['per2cl']/d2op
+		report['per3cl_percent'] = report['per3cl']/d2op
+		loratios = loratios.T
+		hiratios = hiratios.T
+		rprt = pd.concat([report,hiratios,loratios],axis=1)
+	else: 
+		rprt = np.nan
+	return rprt	
+	
+
+reportcolumns = ["Option_Symbol",	"Trade_Date",	"d2op",	"d2hi",	"d2lo",	"d2cl",	"d2ivst",	"per1op",	"per1hi",	"per1lo",	"per1cl",	"per1ivst",	"per2op",	"per2hi",	"per2lo",	"per2cl",	"per2ivst",	"per3op",	"per3hi",	"per3lo",	"per3cl",	"per3ivst",	"Avg_Investible_Volume",	"Trade_Hi", "Trade_Hi_Day",	"Trade_Lo",	"Trade_Lo_Day","per1hi_percent",	"per2hi_percent",	"per3hi_percent",	"per1lo_percent",	"per2lo_percent",	"per3lo_percent",	"per1cl_percent",	"per2cl_percent",	"per3cl_percent",	"D2Hi/D2op",	"D3Hi/D2op",	"D4Hi/D2op",	"D5Hi/D2op",	"D6Hi/D2op",	"D7Hi/D2op",	"D8Hi/D2op",	"D9Hi/D2op",	"D10Hi/D2op",	"D11Hi/D2op",	"D12Hi/D2op",	"D13Hi/D2op",	"D14Hi/D2op",	"D15Hi/D2op",	"D16Hi/D2op",	"D17Hi/D2op",	"D18Hi/D2op",	"D19Hi/D2op",	"D20Hi/D2op",	"D2Lo/D2op",	"D3Lo/D2op",	"D4Lo/D2op",	"D5Lo/D2op",	"D6Lo/D2op",	"D7Lo/D2op",	"D8Lo/D2op",	"D9Lo/D2op",	"D10Lo/D2op",	"D11Lo/D2op",	"D12Lo/D2op",	"D13Lo/D2op",	"D14Lo/D2op",	"D15Lo/D2op",	"D16Lo/D2op",	"D17Lo/D2op",	"D18Lo/D2op",	"D19Lo/D2op",	"D20Lo/D2op"]
+rawcolumns = ['trade_#','underlying_symbol', 'root', 'expiration', 'strike', 'option_type',
+			 'open', 'high', 'low', 'close', 'trade_volume', 'bid_size_1545',
+			 'bid_1545', 'ask_size_1545', 'ask_1545', 'underlying_bid_1545',
+			 'underlying_ask_1545', 'implied_underlying_price_1545',
+			 'active_underlying_price_1545', 'implied_volatility_1545', 'delta_1545',
+			 'gamma_1545', 'theta_1545', 'vega_1545', 'rho_1545', 'bid_size_eod',
+			 'bid_eod', 'ask_size_eod', 'ask_eod', 'underlying_bid_eod',
+			 'underlying_ask_eod', 'vwap', 'open_interest', 'delivery_code']
+
+
+	
+d = dt.datetime.today().date() - dt.timedelta(days=1)
+symbs = ('QQQ','^VIX','SPY','AAPL','IWM') #symbs = ('SPY','^VIX','VXX','XIV','SPY','AAPL','QQQ','IWM','X','NFLX','AMZN','GLD','GDX','C')
+moneyness = (-1,0,1)
+end = dt.datetime.today() - dt.timedelta(days=30)
+
+for symb in symbs:
+	dir = 'C:\\Users\\asus\\Documents\\Quant\\Database\\' + symb + '\\'
+	dirop = ''.join([dir,'Options\\'])
+	sortdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Sort_Reports\\Sort_Data\\' + symb + '\\Presorts\\' + d.strftime('%Y-%m-%d') + '\\'
+
+	sorts = os.listdir(sortdir)
+	targetdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Sort_Reports\\Sort_Data\\' + symb + '\\'
+	os.makedirs(targetdir, exist_ok=True)
+
+
+	for sort in sorts:
+		sor = sort.split('_',3)[1]
+		path = ''.join([sortdir,sort])
+		srt = pd.read_csv(path,'rb',delimiter=',',parse_dates=['Date'],infer_datetime_format=True).set_index(['Date'])
+		srt = srt[:end]
+		dates = list(srt.index)
+		#srt.reset_index(drop=False,inplace=True)
+		rawtardir = ''.join([targetdir,'Raw_Data\\',d.strftime('%Y-%m-%d'), '\\',sor,'\\'])
+		os.makedirs(rawtardir, exist_ok=True)
+		sumtardir = ''.join([targetdir,'Summary\\',d.strftime('%Y-%m-%d'), '\\', sor,'\\'])
+		os.makedirs(sumtardir, exist_ok=True)
+	
+		for m in moneyness:
+		
+			putreport = pd.DataFrame(columns=reportcolumns)
+			callreport = pd.DataFrame(columns=reportcolumns)
+			putraw = pd.DataFrame(columns=rawcolumns)
+			callraw = pd.DataFrame(columns=rawcolumns)
+			xp = srt.index[-1]#['Date']
+			for dat in dates:
+				min_exp, exp, max_exp = next_monthlies(d=dat)
+				p = np.round(srt.loc[dat][0],decimals=0)
+				if xp.year == exp.year:
+					pass
+				else:
+					dir = 'C:\\Users\\asus\\Documents\\Quant\\Database\\' + symb + '\\Options\\'
+					diroptc = ''.join([dir,symb,'_',str(exp.year),'_Calls.csv'])
+					diroptp = ''.join([dir,symb,'_',str(exp.year),'_Puts.csv'])	
+					try: 
+						optcdata = pd.read_csv(diroptc,'rb',delimiter=',',parse_dates=['expiration','quote_date'],infer_datetime_format=True).sort_index(axis=0)						
+					except:
+						optcdata = 'NA'						
+					try:
+						optpdata = pd.read_csv(diroptp,'rb',delimiter=',',parse_dates=['expiration','quote_date'],infer_datetime_format=True).sort_index(axis=0)
+					except:
+						optpdata = 'NA'
+				if len(optcdata) > 12:
+					opc,optc = option_finder(opt=optcdata,symb=symb,strike=p,t='c',start=dat,min_exp=min_exp,exp=exp,max_exp=max_exp,m=m,q=0)
+				else: 
+					opc = 'NA'
+				if len(optpdata) > 12:
+					opp,optp = option_finder(opt=optpdata,symb=symb,strike=p,t='p',start=dat,min_exp=min_exp,exp=exp,max_exp=max_exp,m=m,q=0)
+				else: 
+					opp = 'NA'
+				xp = exp	
+				if len(opc) > 12:
+					#opc['trade_#'] = srt.loc[dat].index + 1
+					rprtcall = mt_reporter(opc,optc)
+					callreport = pd.concat([callreport,rprtcall],axis=0)
+					callraw = pd.concat([callraw,opc],axis=0)
+				else: 
+					pass
+				if len(opp) > 12:
+					#opp['trade_#'] = srt.loc[dat].index + 1
+					rprtput = mt_reporter(opp,optp)
+					putreport = pd.concat([putreport,rprtput],axis=0)
+					putraw = pd.concat([putraw,opp],axis=0)
+				else:
+					pass
+					
+			callraw.index.name = 'quote_date'			
+			rawrprtc = ''.join([symb,'_',sor,'_call.'+str(m)+'.csv'])
+			sumrprtc = ''.join([symb,'_',sor,'_summary_call.'+str(m)+'.csv'])
+			pathopc = ''.join([sumtardir,sumrprtc])
+			if os.path.isfile(pathopc):
+				callraw.to_csv(''.join([rawtardir,rawrprtc]),mode='a',header=None)
+				callreport.to_csv(''.join([sumtardir,sumrprtc]),mode='a',index=False,header=None)
+			else:
+				callraw.to_csv(''.join([rawtardir,rawrprtc]),mode='w',header=callraw.columns)
+				callreport.to_csv(''.join([sumtardir,sumrprtc]),mode='w',index=False,header=callreport.columns)	
+					
+					
+			putraw.index.name = 'quote_date'		
+			rawrprtp = ''.join([symb,'_',sor,'_put.'+str(m)+'.csv'])
+			sumrprtp = ''.join([symb,'_',sor,'_summary_put.'+str(m)+'.csv'])
+			pathopp = ''.join([sumtardir,sumrprtp])
+			if os.path.isfile(pathopp):
+				putraw.to_csv(''.join([rawtardir,rawrprtp]),mode='a',header=None)
+				putreport.to_csv(''.join([sumtardir,sumrprtp]),mode='a',index=False,header=None)
+			else: 
+				putraw.to_csv(''.join([rawtardir,rawrprtp]),mode='w',header=putraw.columns)
+				putreport.to_csv(''.join([sumtardir,sumrprtp]),mode='w',index=False,header=putreport.columns)
+
+
+
+
+				
+import pandas as pd
+import numpy as np
+import os 
+import datetime as dt
+
+	
+
+def trade_analyzer(data,sellpc,buypc,exstr,exitpc,mmgmt,strategyformula,acct):
+	trpl = ''.join([strategyformula,'_Trade_Profit/Loss'])
+	profit = 1 + (sellpc-buypc)
+	entries = pd.Series(data=(data['D2Lo/D2op'] <= buypc),index=data.index,name=''.join([strategyformula,'_Got_In?']))
+	if exstr == 'EX4':
+		wins = pd.Series(data=((data['Trade_Hi'] >= sellpc) & (entries == True)),index=data.index,name=''.join([strategyformula,'_Wins?']))
+	else:
+		wins = pd.Series(data=((data['per1hi_percent'] >= sellpc) & (entries == True)),index=data.index,name=''.join([strategyformula,'_Wins?']))
+	
+	if exstr == 'EX1':
+		successfulexits = pd.Series(data=((wins == False) & (entries == True) & (data['per2hi_percent'] >= exitpc)),index=data.index,name=''.join([strategyformula,'_Successful_Exits']))
+	elif exstr == 'EX2':
+		successfulexits = pd.Series(data=(wins == False) & (entries == True) & (data['per2hi_percent'] >= (data['d2op']*.95)),index=data.index,name=''.join([strategyformula,'_Successful_Exits']))
+	elif exstr == 'EX3' or exstr == 'EX4':
+		successfulexits = pd.Series(data=False,index=data.index,name=''.join([strategyformula,'_Successful_Exits']))
+	if exstr == 'EX3':
+		escape = pd.Series(data=np.where(((wins == False) & (entries == True) & (successfulexits == False)),exstr, np.nan),index=data.index,name=''.join([strategyformula,'_Escapes?']))
+	elif exstr == 'EX1':
+		escape = pd.Series(data=(np.where((wins == False) & (entries == True) & (successfulexits == False),exstr, np.nan)),index=data.index,name=''.join([strategyformula,'_Escapes?']))
+	elif exstr == 'EX2':
+		escape = pd.Series(data=(np.where((wins == False) & (entries == True) & (successfulexits == False),exstr, np.nan)),index=data.index,name=''.join([strategyformula,'_Escapes?']))
+	elif exstr == 'EX4':
+		escape = pd.Series(data=(np.where((wins == False) & (entries == True) & (successfulexits == False),exstr, np.nan)),index=data.index,name=''.join([strategyformula,'_Escapes?']))
+	tradepl = pd.Series(data=(np.where(wins == True,(acct * profit)-acct,
+								np.where(successfulexits == True,(acct * exitpc) - acct,
+								np.where(escape == 'EX3',((acct * data['per1cl_percent'])-acct),
+								np.where(((escape == 'EX2') & (successfulexits == False)),((acct * .95)-acct),
+								np.where(((escape == 'EX1') & (successfulexits == False)),((acct * data['per2cl_percent'])-acct),
+								np.where((escape == 'EX4'),((acct * data['per3cl_percent'])-acct),np.nan))))))),index=data.index,name=trpl)
+	ev = ''.join([strategyformula,'_Evaluation'])
+	eval = pd.Series(data=(np.where(((wins == False) | ((wins == True) & (tradepl == ((acct * profit)-acct)))),True,False)),index=data.index, name =''.join([strategyformula,'_Win_Calc_Evaluation'])) #Discuss this calc with Dad
+
+	datah = pd.concat([entries,wins,successfulexits,escape,tradepl,eval],axis=1)
+	return datah
+
+		
+	
+def decoder(strategy):
+#"20/10.GLB,7-10.GLB,EX1,MGMT1"
+	st = strategy.split(',',3)
+	buysell = st[0].split('/',1)
+	buyperc = buysell[0]
+	buysell = buysell[1].split('.',1)
+	sellperc = buysell[0]
+	sellset = buysell[1]
+	if len(st[1]) != 0:
+		exit = st[1].split('.',1)
+		exitperiod = exit[0]
+		exitset = exit[1]
+	else:
+		exitperiod = np.nan
+		exitset = np.nan		
+	exitstrategy = st[2]
+	mmgmt = st[3]	
+	return buyperc,sellperc,sellset,exitperiod,exitset,exitstrategy,mmgmt
+	
+def reporter(data,strategy,option,account):
+	buyperc,sellperc,sellset,exitperiod,exitset,exstr,mmgmt = decoder(strategy)
+	report = pd.DataFrame(index=np.arange(1),columns=criteria)
+	strategyformula = ''.join([strategy,',',option.replace('.csv','')])
+	report['Strategy_Formula'] = strategyformula
+	report['#_in_Dataset'] = len(data)
+	buypc = data['D2Lo/D2op'].quantile(q=int(buyperc)/100)
+	report['Buy_Target_%'] = buypc
+	acct = account * .5
+	semiset = data[data['D2Lo/D2op'] <= buypc] #Semi-Restricted Data Set
+	if exstr == 'EX4':
+		if sellset == 'SEMI':
+			sellpc = semiset['Trade_Hi'].quantile(q=int(sellperc)/100)
+			report['Win_Period_10th'] = semiset['Trade_Hi'].quantile(q=.1)
+			report['Win_Period_20th'] = semiset['Trade_Hi'].quantile(q=.2)
+			report['Win_Period_40th'] = semiset['Trade_Hi'].quantile(q=.4)
+			report['Win_Period_50th'] = semiset['Trade_Hi'].quantile(q=.5)
+			report['Win_Period_60th'] = semiset['Trade_Hi'].quantile(q=.6)
+		else: 
+			sellpc = data['Trade_Hi'].quantile(q=int(sellperc)/100)
+			report['Win_Period_10th'] = data['Trade_Hi'].quantile(q=.1)
+			report['Win_Period_20th'] = data['Trade_Hi'].quantile(q=.2)
+			report['Win_Period_40th'] = data['Trade_Hi'].quantile(q=.4)
+			report['Win_Period_50th'] = data['Trade_Hi'].quantile(q=.5)
+			report['Win_Period_60th'] = data['Trade_Hi'].quantile(q=.6)
+	else: 
+		if sellset == 'SEMI':
+			sellpc = semiset['per1hi_percent'].quantile(q=int(sellperc)/100)
+			report['Win_Period_10th'] = semiset['per1hi_percent'].quantile(q=.1)
+			report['Win_Period_20th'] = semiset['per1hi_percent'].quantile(q=.2)
+			report['Win_Period_40th'] = semiset['per1hi_percent'].quantile(q=.4)
+			report['Win_Period_50th'] = semiset['per1hi_percent'].quantile(q=.5)
+			report['Win_Period_60th'] = semiset['per1hi_percent'].quantile(q=.6)
+		else: 
+			sellpc = data['per1hi_percent'].quantile(q=int(sellperc)/100)
+			report['Win_Period_10th'] = data['per1hi_percent'].quantile(q=.1)
+			report['Win_Period_20th'] = data['per1hi_percent'].quantile(q=.2)
+			report['Win_Period_40th'] = data['per1hi_percent'].quantile(q=.4)
+			report['Win_Period_50th'] = data['per1hi_percent'].quantile(q=.5)
+			report['Win_Period_60th'] = data['per1hi_percent'].quantile(q=.6)
+		
+	restset = semiset[semiset['per1hi_percent'] >= sellpc] #Restricted Data Set
+	report['Sell_Target_%'] = sellpc
+	#Exit Percentage Target Based On Exit Set Specification
+	if exitset == 'GLB':
+		exitpc = data['per2hi_percent'].quantile(q=.1)
+	elif exitset == 'SEMI':
+		exitpc = semiset['per2hi_percent'].quantile(q=.1)
+	elif exitset == 'REST':
+		exitpc = restset['per2hi_percent'].quantile(q=.1)
+		
+	#Generate Column Names
+	wins = ''.join([strategyformula,'_Wins?'])
+	trpl = ''.join([strategyformula,'_Trade_Profit/Loss'])
+	ev = ''.join([strategyformula,'_Win_Calc_Evaluation'])
+	biglosstx = ''.join([strategyformula,'_TXs_Loss>50%'])
+	cumprofit = ''.join([strategyformula,'_Cumulative_Profit/Loss'])
+	entries = ''.join([strategyformula,'_Got_In?'])
+	successfulexits = ''.join([strategyformula,'_Successful_Exits'])
+	report['Calc_Profit%'] = sellpc-buypc
+	pft = 1 + (sellpc-buypc)
+	datah = trade_analyzer(data,sellpc=sellpc,buypc=buypc,exstr=exstr,exitpc=exitpc,mmgmt=mmgmt,strategyformula=strategyformula,acct=acct)
+	
+	#Final Calcs
+	report['D2_Investible_Volume'] = data.ix[-20:]['d2ivst'].mean()#test
+	report['#_of_Transactions'] = np.sum(datah[entries])
+	datah[biglosstx] = datah[trpl] <= (acct * -.5)
+	report['#_OF_"FALSE"_IN_WIN_CALC'] = len(data) - np.sum(datah[ev]) #Investigate: Clarify the meaning of the Win Calc and its calculation
+	report['%_of_TXs_w/_LOSS>50%'] = np.sum(datah[biglosstx])/len(semiset)
+	datah[cumprofit] = datah[trpl].cumsum()
+	report['Win%'] = np.sum(datah[wins])/np.sum(datah[entries])
+	report['Fail%'] = 1-report['Win%']
+	report['CALC._PROF/LOSS_ON_Fd_TXS'] = exitpc-buypc
+	report['Highest_Hi'] = datah[cumprofit].max()
+	report['Max_Drawdown'] = datah[cumprofit].min()
+	report['Max_%_Drawdown'] = datah[cumprofit].min()/acct
+	net = datah[datah[entries] == True]
+	report['Net_Profit/Loss'] = net.ix[-1][cumprofit]
+	report['Ratio_Net/Highest_Hi'] = report['Net_Profit/Loss']/report['Highest_Hi']
+	report['Hist_Profit/Loss_per_Tx'] = (report['Net_Profit/Loss']/report['#_of_Transactions'])
+	report['#_TX>0'] = np.sum(datah[trpl]>0)
+	report['%_of_TX>0'] = np.sum(datah[trpl]>0)/len(semiset)
+	report['Catastrophic_Fail_%_(-80%)'] = np.sum(datah[trpl]<=(acct*(-.8)))
+	report['AMT_AT_RISK'] = acct
+	report['#_of_Exit_Attempts'] = np.sum(datah[entries]) - np.sum(datah[wins])
+	report['%_Successful_Exits'] = np.sum(datah[successfulexits])/(np.sum(datah[entries]) - np.sum(datah[wins]))
+	
+	
+	if (mmgmt == 'MGMT1') & (report.ix[0]['#_of_Transactions'] > 9) & (report.ix[0]['Ratio_Net/Highest_Hi'] >= .9499) & (report.ix[0]['Hist_Profit/Loss_per_Tx'] >= acct * .099) & (report.ix[0]['#_OF_"FALSE"_IN_WIN_CALC'] < 2) &  (report.ix[0]['%_of_TXs_w/_LOSS>50%'] < .06) & (report.ix[0]['Win%'] >= .8) & (report.ix[0]['Catastrophic_Fail_%_(-80%)'] == 0):
+		report['Level'] = 1
+	else:
+		report['Level'] = 0
+	return report, datah
+	
+criteria = ('Form_#','Level','Strategy_Formula','#_of_Transactions','#_in_Dataset','D2_Investible_Volume','Calc_Profit%','Win%','Net_Profit/Loss',
+			'Highest_Hi','Ratio_Net/Highest_Hi','Hist_Profit/Loss_per_Tx','#_TX>0','%_of_TX>0', '#_OF_"FALSE"_IN_WIN_CALC',
+			'Fail%','CALC._PROF/LOSS_ON_Fd_TXS','#_of_Exit_Attempts','%_Successful_Exits','Max_Drawdown','Max_%_Drawdown','%_of_TXs_w/_LOSS>50%',
+			'Catastrophic_Fail_%_(-80%)','AMT_AT_RISK','Buy_Target_%','Sell_Target_%','Win_Period_10th','Win_Period_20th','Win_Period_40th','Win_Period_50th','Win_Period_60th')	
+
+strategies = ["20/10.GLB,7-10.GLB,EX1,MGMT1",
+			"20/10.GLB,7-10.GLB,EX1,MGMT2",
+			"20/10.GLB,7-10.GLB,EX2,MGMT1",
+			"20/10.GLB,7-10.GLB,EX2,MGMT2",
+			"20/10.GLB,7-10.GLB,EX3,MGMT1",
+			"20/10.GLB,7-10.GLB,EX3,MGMT2",
+			"20/10.GLB,7-10.SEMI,EX1,MGMT1",
+			"20/10.GLB,7-10.SEMI,EX1,MGMT2",
+			"20/10.GLB,7-10.REST,EX1,MGMT1",
+			"20/10.GLB,7-10.REST,EX1,MGMT2",
+			"20/10.SEMI,7-10.GLB,EX1,MGMT1",
+			"20/10.SEMI,7-10.GLB,EX1,MGMT2",
+			"20/10.SEMI,7-10.GLB,EX2,MGMT1",
+			"20/10.SEMI,7-10.GLB,EX2,MGMT2",
+			"20/10.SEMI,7-10.GLB,EX3,MGMT1",
+			"20/10.SEMI,7-10.GLB,EX3,MGMT2",
+			"20/10.SEMI,7-10.SEMI,EX1,MGMT1",
+			"20/10.SEMI,7-10.SEMI,EX1,MGMT2",
+			"20/10.SEMI,7-10.REST,EX1,MGMT1",
+			"20/10.SEMI,7-10.REST,EX1,MGMT2",
+			"20/5.GLB,7-10.GLB,EX1,MGMT1",
+			"20/5.GLB,7-10.GLB,EX1,MGMT2",
+			"20/5.GLB,7-10.GLB,EX2,MGMT1",
+			"20/5.GLB,7-10.GLB,EX2,MGMT2",
+			"20/5.GLB,7-10.GLB,EX3,MGMT1",
+			"20/5.GLB,7-10.GLB,EX3,MGMT2",
+			"20/5.GLB,7-10.SEMI,EX1,MGMT1",
+			"20/5.GLB,7-10.SEMI,EX1,MGMT2",
+			"20/5.GLB,7-10.REST,EX1,MGMT1",
+			"20/5.GLB,7-10.REST,EX1,MGMT2",
+			"20/5.SEMI,7-10.GLB,EX1,MGMT1",
+			"20/5.SEMI,7-10.GLB,EX1,MGMT2",
+			"20/5.SEMI,7-10.GLB,EX2,MGMT1",
+			"20/5.SEMI,7-10.GLB,EX2,MGMT2",
+			"20/5.SEMI,7-10.GLB,EX3,MGMT1",
+			"20/5.SEMI,7-10.GLB,EX3,MGMT2",
+			"20/5.SEMI,7-10.SEMI,EX1,MGMT1",
+			"20/5.SEMI,7-10.SEMI,EX1,MGMT2",
+			"20/5.SEMI,7-10.REST,EX1,MGMT1",
+			"20/5.SEMI,7-10.REST,EX1,MGMT2",
+			"40/10.SEMI,7-10.GLB,EX1,MGMT1",
+			"40/10.SEMI,7-10.GLB,EX1,MGMT2",
+			"40/10.SEMI,7-10.GLB,EX2,MGMT1",
+			"40/10.SEMI,7-10.GLB,EX2,MGMT2",
+			"40/10.SEMI,7-10.GLB,EX3,MGMT1",
+			"40/10.SEMI,7-10.GLB,EX3,MGMT2",
+			"40/10.SEMI,7-10.SEMI,EX1,MGMT1",
+			"40/10.SEMI,7-10.SEMI,EX1,MGMT2",
+			"40/10.SEMI,7-10.REST,EX1,MGMT1",
+			"40/10.SEMI,7-10.REST,EX1,MGMT2",
+			"40/5.GLB,7-10.GLB,EX1,MGMT1",
+			"40/5.GLB,7-10.GLB,EX1,MGMT2",
+			"40/5.GLB,7-10.GLB,EX2,MGMT1",
+			"40/5.GLB,7-10.GLB,EX2,MGMT2",
+			"40/5.GLB,7-10.GLB,EX3,MGMT1",
+			"40/5.GLB,7-10.GLB,EX3,MGMT2",
+			"40/5.GLB,7-10.SEMI,EX1,MGMT1",
+			"40/5.GLB,7-10.SEMI,EX1,MGMT2",
+			"40/5.GLB,7-10.REST,EX1,MGMT1",
+			"40/5.GLB,7-10.REST,EX1,MGMT2",
+			"40/5.SEMI,7-10.GLB,EX1,MGMT1",
+			"40/5.SEMI,7-10.GLB,EX1,MGMT2",
+			"40/5.SEMI,7-10.GLB,EX2,MGMT1",
+			"40/5.SEMI,7-10.GLB,EX2,MGMT2",
+			"40/5.SEMI,7-10.GLB,EX3,MGMT1",
+			"40/5.SEMI,7-10.GLB,EX3,MGMT2",
+			"40/5.SEMI,7-10.SEMI,EX1,MGMT1",
+			"40/5.SEMI,7-10.SEMI,EX1,MGMT2",
+			"40/5.SEMI,7-10.REST,EX1,MGMT1",
+			"40/5.SEMI,7-10.REST,EX1,MGMT2",
+			"20/10.GLB,11-20.GLB,EX4,MGMT1",
+			"20/10.SEMI,11-20.GLB,EX4,MGMT1",
+			"20/10.GLB,11-20.SEMI,EX4,MGMT1",
+			"20/10.SEMI,11-20.SEMI,EX4,MGMT1"]
+
+
+symbs = ('QQQ','^VIX','SPY','AAPL','IWM') #symbs = ('SPY','^VIX','VXX','XIV','SPY','AAPL','QQQ','IWM','X','NFLX','AMZN','GLD','GDX','C')
+d = dt.datetime.today().date() - dt.timedelta(days=1)
+targetdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Sort_Reports\\Sorts\\' + d.strftime('%Y-%m-%d') + '\\Sorts\\'
+for symb in symbs:
+	os.makedirs(targetdir, exist_ok=True)
+	targetdirdata = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Sort_Reports\\Sorts\\' + d.strftime('%Y-%m-%d') + '\\Data\\' + symb + '\\'
+	os.makedirs(targetdirdata, exist_ok=True)
+	sortdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Sort_Reports\\Sort_Data\\' + symb + '\\Summary\\' + d.strftime('%Y-%m-%d') + '\\'
+	sortdirs = list(os.listdir(sortdir)) #gives list of each sort's summary report folder
+	account = 20000
+	for dir in sortdirs: #looks at each folder in summary report folder for each sort folder in list 'sortdirs'
+		sorts = list(os.listdir(''.join([sortdir,dir,'\\']))) #gives list of all files in each sort report summary folder
+		
+		for sor in sorts:
+			sortsummary = pd.read_csv(''.join([sortdir,dir,'\\',sor]),'rb',delimiter=',',parse_dates=['Trade_Date'],infer_datetime_format=True).set_index(['Trade_Date'])
+			sortsummary.dropna(axis=0,subset=['d2op'],inplace=True)
+			data = sortsummary
+			datae = pd.DataFrame()
+			frm = 0
+			for strategy in strategies:
+				frm =+ 1			
+				if strategy.split(',',3)[3] == 'MGMT2':
+					continue
+				else:
+					s = sor.split('_',3)
+					option = s[3]
+					srt = s[1]
+					
+					report, datah = reporter(data=data,strategy=strategy,option=option,account=account)
+					datae = pd.concat([datae,datah],axis=1)
+					rprtpath = ''.join([targetdir,symb,'_Sort_Report_',srt,'_',d.strftime('%Y-%m-%d'),'.csv'])
+					datapath = ''.join([targetdirdata,symb,'_Sort_Report_Data_',srt,'_',option,'_',d.strftime('%Y-%m-%d'),'.csv'])
+					report['Form_#'] = ''.join([str(frm),'_',option])
+					if os.path.isfile(rprtpath):
+						report.to_csv(rprtpath,mode='a',header=None)				
+					else: 
+						report.to_csv(rprtpath,mode='w',header=report.columns)
+			if 'Unnamed: 0' in data.columns:
+				data.drop(['Unnamed: 0'], axis=1,inplace=True)
+			data = pd.concat([data,datae],axis=1)		
+			data.to_csv(datapath,mode='w',header=data.columns)
+
+
+
+
+import pandas as pd
+import numpy as np
+import os 
+import datetime as dt
+
+def sort_decoder(strategy):
+#"20/10.GLB,7-10.GLB,EX1,MGMT1,call.1"
+	st = strategy.split(',',4)
+	st = st[4].split('.',1)
+	option = st[0]
+	stx = st[1]
+	return option, stx	
+		
+def option_n_strike(data):
+	option = pd.Series((x.split(',',4)[4].split('.',1)[0] for x in data['Strategy_Formula']),index=data.index,name='Option')
+	strike = pd.Series((x.split(',',4)[4].split('.',1)[1] for x in data['Strategy_Formula']),index=data.index,name='Strike')
+	data = pd.concat([data,strike,option],axis=1)
+	return data
+#days = [1,2,3,4,5]
+#for x in days:
+d = dt.datetime.today().date() - dt.timedelta(days=1)
+lcrcolumns = ['Stock_Symbol','Sort','Form_#','Level','Strategy_Formula','#_of_Transactions','#_in_Dataset','D2_Investible_Volume','Calc_Profit%','Win%','Net_Profit/Loss',
+			'Highest_Hi','Ratio_Net/Highest_Hi','Hist_Profit/Loss_per_Tx','#_TX>0','%_of_TX>0', '#_OF_"FALSE"_IN_WIN_CALC',
+			'Fail%','CALC._PROF/LOSS_ON_Fd_TXS','#_of_Exit_Attempts','%_Successful_Exits','Max_Drawdown','Max_%_Drawdown','%_of_TXs_w/_LOSS>50%',
+			'Catastrophic_Fail_%_(-80%)','AMT_AT_RISK','Buy_Target_%','Win_Period_10th','Win_Period_20th','Win_Period_40th','Win_Period_50th','Win_Period_60th']
+
+	
+targetdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Level_Class_Reports\\' +d.strftime('%Y-%m-%d')+ '\\'
+sortsdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Sort_Reports\\Sorts\\' +d.strftime('%Y-%m-%d')+ '\\Sorts\\'
+sortdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Sort_Reports\\Sorts\\' +d.strftime('%Y-%m-%d')+ '\\'
+path = ''.join([targetdir,'Level_Class_Report_',d.strftime('%Y_%m_%d'),'.csv'])
+os.makedirs(targetdir, exist_ok=True)
+sorts = os.listdir(sortsdir)
+lcr = pd.DataFrame(columns=lcrcolumns)
+for sort in sorts:
+	lcreport = pd.read_csv(''.join([sortsdir,sort]),'rb',delimiter=',')
+	lcreport = lcreport[lcreport['Level']==1]
+	s = sort.split('_',4)
+	lcreport['Stock_Symbol'] = s[0]
+	lcreport['Sort'] = s[3]
+	lcr = pd.concat([lcr,lcreport],axis=0)
+lcr = option_n_strike(lcr)
+if 'Unnamed: 0' in lcreport.columns:
+	lcreport.drop(['Unnamed: 0'], axis=1,inplace=True)
+lcr = lcr[['Stock_Symbol','Option','Strike','Sort','Form_#','Level','Strategy_Formula','#_of_Transactions','#_in_Dataset','D2_Investible_Volume','Calc_Profit%','Win%','Net_Profit/Loss',
+			'Highest_Hi','Ratio_Net/Highest_Hi','Hist_Profit/Loss_per_Tx','#_TX>0','%_of_TX>0', '#_OF_"FALSE"_IN_WIN_CALC',
+			'Fail%','CALC._PROF/LOSS_ON_Fd_TXS','#_of_Exit_Attempts','%_Successful_Exits','Max_Drawdown','Max_%_Drawdown','%_of_TXs_w/_LOSS>50%',
+			'Catastrophic_Fail_%_(-80%)','AMT_AT_RISK','Buy_Target_%','Win_Period_10th','Win_Period_20th','Win_Period_40th','Win_Period_50th','Win_Period_60th']]
+if os.path.isfile(path):
+	lcr.to_csv(path,mode='a',header=None)
+else: 
+	lcr.to_csv(path,mode='w',header=lcr.columns)
+	
+	
+import pandas as pd
+import numpy as np
+import os
+from datetime import datetime
+import datetime as dt
+
+
+tnpcolumns = [['Trade_#','Log_Date','Trade_Date','Option_Type','Option_Symbol','Expiration','Underlying_Symbol','Strike_Position(stx)','Strategy_1',
+			'Strategy_2','Strategy_3','Strategy_4','Strategy_5','Strategy_6',
+			'Strategy_7','Strategy_8','Strategy_9','Strategy_10','Strategy_11',
+			'Strategy_12','Strategy_13','Strategy_14','Strategy_15','Strategy_16',
+			'Strategy_17','Strategy_18','Strategy_19','Strategy_20']]		
+# tnplog index name = 'Transaction_#', 1 based index
+
+def next_monthlies(d): # must test len of option price history to ensure 1: that purchase is possible on d2 and 2: that there is at least 12 days of data
+	f = d + dt.timedelta(days=30)
+	g = d + dt.timedelta(days=60)
+	g = dt.date(g.year, g.month, 15)
+	f = dt.date(f.year, f.month, 15)
+	g = (g + dt.timedelta(days=(calendar.FRIDAY - g.weekday()) % 7))
+	f = (f + dt.timedelta(days=(calendar.FRIDAY - f.weekday()) % 7))
+	e = f - dt.timedelta(weeks=2)
+	return e,f,g
+	
+def find_strike(array,value,shift):
+	idx = np.abs(array-value).argmin()
+	stx = array[idx+shift]	
+	return stx
+	
+def nearest_exp(array,dat,start):
+	strt = dt.date(start.year, start.month, start.day)
+	array.reset_index(drop=True,inplace=True)
+	idx = np.abs(array-dat).argmin()
+	exp = aray[idx]
+	return exp
+	
+
+def TnPLogger(data,d):	
+	tnplogger = pd.DataFrame(columns = tnpcolumns)		
+	stocks = data['Stock_Symbol'].unique()
+	i = -1
+	for symb in stocks:
+		#stk = web.DataReader(symb, 'yahoo', start, d)
+		#center = stk.ix[d]['open']
+		trades = data[data['Stock_Symbol']==symb]
+		calls = trades[trades['Option']=='call']
+		puts = trades[trades['Option']=='put']
+		cstx = calls['Strike'].unique()
+		pstx = puts['Strike'].unique()		
+		if len(cstx) > 0:
+			for x in cstx:
+				i = i + 1
+				optc = calls[calls['Strike']==x]				
+				#min_exp,exp,max_exp = next_monthlies(d)
+				#opt = option_finder(symb=symb,center=center,t='c',min_exp=min_exp,exp=exp,max_exp=max_exp,m=x)
+				tnplogger.at[i,'Trade_Date'] =	d
+				tnplogger.at[i,'Option_Type'] = 'Call'
+				tnplogger.at[i,'Strike_Position(stx)'] = x
+				tnplogger.at[i,'Underlying_Symbol'] = symb
+				optc.sort_values(by='Win%',ascending=True,axis=0,inplace=True)
+				strtgs = optc['Strategy_Formula'].unique()
+				strtgs = strtgs[:20]
+				#tnplogger['Suggested_Option_Symbol'] = opt
+				#tnplogger['Expiration'] = opt.split(',',3)[0]
+				z = -1
+				for s in strtgs:
+					z = z + 1				
+					col = ''.join(['Strategy_',str(z+1)])
+					tnplogger.at[i,col] = s
+					
+		else: 
+			pass
+		if len(pstx) > 0:
+			for x in pstx:
+				i = i + 1
+				optp = puts[puts['Strike']==x]				
+				#min_exp,exp,max_exp = next_monthlies(d)
+				#opt = option_finder(symb=symb,center=center,t='p',min_exp=min_exp,exp=exp,max_exp=max_exp,m=x)
+				tnplogger.at[i,'Trade_Date'] =	d
+				tnplogger.at[i,'Option_Type'] = 'Put'
+				tnplogger.at[i,'Strike_Position(stx)'] = x
+				tnplogger.at[i,'Underlying_Symbol'] = symb
+				optp.sort_values(by='Win%',ascending=True,axis=0,inplace=True)
+				strtgs = optp['Strategy_Formula'].unique()
+				strtgs = strtgs[:20]
+				#tnplogger['Option_Symbol'] = opt
+				#tnplogger['Expiration'] = opt.split(',',3)[0]
+				z = -1
+				for s in strtgs:
+					z = z + 1				
+					col = ''.join(['Strategy_',str(z+1)])
+					tnplogger.at[i,col] = s
+		else: 
+			pass
+	tnplogger['Trade_#'] = tnplogger.index + 1
+	tnplogger['Log_Date'] = dt.date.today()
+	return tnplogger
+	
+	
+start = dt.date.today() - dt.timedelta(days=2)
+runlogcolumns = ['Run_Dates','LCR_Dates']
+runlogpath = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Logs\\TnPRunLog.csv'
+tnplogpath = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Logs\\Trades_&_Plays_Log.csv'
+lcrdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Level_Class_Reports\\' #+d.strftime('%Y-%m-%d')+ '\\Level_Class_Report_' +d.strftime('%Y-%m-%d') + '.csv'
+tempdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Templates\\'
+
+if os.path.isfile(runlogpath):
+	runlog = pd.read_csv(runlogpath, 'rb', delimiter=',')
+	tnplog = pd.read_csv(tnplogpath,'rb',delimiter=',',parse_dates=['Log_Date'],infer_datetime_format=True).sort(columns='Log_Date',ascending=False,axis=0)
+	last_run = dt.datetime.strptime(runlog.iloc[-1]['Run_Dates'], '%Y-%m-%d').date()
+	lcrs = os.listdir(lcrdir)
+	remaining = pd.to_datetime([i for i in lcrs if last_run < dt.datetime.strptime(i, '%Y-%m-%d').date()],infer_datetime_format=True)
+	tx=1
+else:
+	lcrs = os.listdir(lcrdir)
+	remaining = [dt.datetime.strptime(i, '%Y-%m-%d').date() for i in lcrs]
+	runlog = pd.DataFrame(columns = runlogcolumns)
+	tnplog = pd.DataFrame(columns = tnpcolumns)
+	tx = 0
+	
+for d in remaining:
+	lcrpath = ''.join([lcrdir,d.strftime('%Y-%m-%d'),'\\Level_Class_Report_',d.strftime('%Y_%m_%d'),'.csv'])	
+	lcr = pd.read_csv(lcrpath,'rb',delimiter=',')
+	log = TnPLogger(lcr,d)
+	if not tx == 0:		
+		log['Trade_#'] = log['Trade_#'] + tnplog.iloc[-1]['Trade_#']
+	tnplog = pd.concat([tnplog,log],axis=0)
+	tx = 1
+	#tnplog.sort(columns='Log_Date', axis=0, ascending=True, inplace=True) 
+	#tnplog.reset_index(drop=True,inplace=True)
+tnplog.to_csv(tnplogpath,mode='w',delimiter=',',index=False)
+
+daysrunlog = pd.DataFrame(data={'Run_Dates' : dt.date.today(),'LCR_Dates' : remaining}, columns = runlogcolumns)
+runlog = pd.concat([runlog,daysrunlog],axis=0)
+runlog.to_csv(runlogpath, mode='w',index=False,header=runlog.columns)
+	
+
+import pandas as pd
+import numpy as np
+import os
+from datetime import datetime
+import datetime as dt
+import calendar
+
+
+
+def next_monthlies(d): # must test len of option price history to ensure 1: that purchase is possible on d2 and 2: that there is at least 12 days of data
+	f = d + dt.timedelta(days=30)
+	g = d + dt.timedelta(days=60)
+	g = dt.date(g.year, g.month, 15)
+	f = dt.date(f.year, f.month, 15)
+	g = (g + dt.timedelta(days=(calendar.FRIDAY - g.weekday()) % 7))
+	f = (f + dt.timedelta(days=(calendar.FRIDAY - f.weekday()) % 7))
+	e = f - dt.timedelta(weeks=2)
+	return e,f,g
+	
+def find_strike(array,value,shift):
+	idx = np.abs(array-value).argmin()
+	stx = array[idx+shift]	
+	return stx
+	
+def nearest_exp(array,dat,start):
+	strt = dt.date(start.year, start.month, start.day)
+	array.reset_index(drop=True,inplace=True)
+	idx = np.abs(array-dat).argmin()
+	exp = array[idx]
+	return exp
+	
+def option_finder(opt,symb,strike,start,opt_type,min_exp,exp,max_exp,m): # open opt_key outside of func in begining of loop and pass df as argument
+	try:
+		opt = (opt[opt['expiration'] <= max_exp])
+		opt = (opt[opt['expiration'] >= min_exp])
+		opt = (opt[opt['quote_date'] >= start])
+		
+		stx = find_strike(opt['strike'],strike,m)
+		opt = (opt[opt['strike'] == stx])
+		opt.reset_index(drop=False, inplace=True)
+		
+		if len(opt['expiration'].unique()) > 1:		
+			x = nearest_exp(opt['expiration'],exp,start)
+			mask = opt['expiration'] == x
+			opt = opt[opt['expiration'] == x]
+		duples = opt['quote_date'].duplicated()
+		if duples.isin([True]).values.any():
+			opt = opt[duples == False]
+		
+	
+		option = ''.join([str(opt.loc[opt.index[0]]['expiration'].date()),',',opt_type,',',str(stx),',',symb])
+		opt = opt[['underlying_symbol', 'quote_date','root', 'expiration', 'strike', 'option_type',
+			 'open', 'high', 'low', 'close', 'trade_volume', 'bid_size_1545',
+			 'bid_1545', 'ask_size_1545', 'ask_1545', 'underlying_bid_1545',
+			 'underlying_ask_1545', 'implied_underlying_price_1545',
+			 'active_underlying_price_1545', 'implied_volatility_1545', 'delta_1545',
+			 'gamma_1545', 'theta_1545', 'vega_1545', 'rho_1545', 'bid_size_eod',
+			 'bid_eod', 'ask_size_eod', 'ask_eod', 'underlying_bid_eod',
+			 'underlying_ask_eod', 'vwap', 'open_interest', 'delivery_code']]
+	except: 
+		opt = 'NA'
+		option = 'NA'
+	return opt, option
+	
+current_time = dt.datetime.now()	
+last_friday = (current_time.date()
+    - dt.timedelta(days=current_time.weekday())
+    + dt.timedelta(days=4, weeks=-1))
+
+logdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Logs\\Trades_&_Plays_Log.csv'
+tnplog = pd.read_csv(logdir, 'rb', delimiter=',',parse_dates=['Trade_Date'],infer_datetime_format=True).set_index(['Trade_#'])
+
+tnplog = tnplog.replace(np.nan,' ', regex=True)
+to_get_option_symbols = tnplog[tnplog['Option_Symbol'].isnull()]
+tnplog['Option_Symbol'] = tnplog['Option_Symbol'].astype('str')
+tnplog['Expiration'] = tnplog['Expiration'].astype('str')
+for i in to_get_option_symbols.index:
+	dat = tnplog.loc[i]['Trade_Date'] #datetime.strptime(tnplog.loc[x]['Trade_Date'], '%m/%d/%Y')
+	if (dat.date() == last_friday) & (dt.date.today().weekday() >= 5) | (dat.date() == dt.date.today()):
+		continue
+		#pass
+	symb = tnplog.loc[i]['Underlying_Symbol']
+	dir = 'C:\\Users\\asus\\Documents\\Quant\\Database\\' + symb + '\\Options\\'
+	targetpath = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Option_Data\\' + symb + '\\'
+	os.makedirs(targetpath, exist_ok=True)	
+	m = tnplog.loc[i]['Strike_Position(stx)']
+	dirstk = 'C:\\Users\\asus\\Documents\\Quant\\Database\\' + symb + '\\Stock\\' + symb + '.csv'
+	stk = pd.read_csv(dirstk,'r',',',parse_dates=['Date'],infer_datetime_format=True).set_index(['Date'])
+	y = pd.Index(stk.index).get_loc(dat)
+	d = stk.index[y+1]
+	opt_type = tnplog.loc[i]['Option_Type']
+	min_exp, exp, max_exp = next_monthlies(d=dat)
+	strike = np.round(stk.loc[d][0],decimals=0)
+	diropt = ''.join([dir,symb,'_',str(exp.year),'_',opt_type,'s.csv'])
+	try: 
+		optdata = pd.read_csv(diropt,'rb',delimiter=',',parse_dates=['expiration','quote_date'],infer_datetime_format=True).sort_index(axis=0)						
+	except:
+		optdata = 'NA'		
+	opt,option_symbol = option_finder(opt=optdata,symb=symb,strike=strike,start=dat,opt_type=opt_type,min_exp=min_exp,exp=exp,max_exp=max_exp,m=m)
+	if len(option_symbol) > 5:	
+		tnplog.at[i,'Option_Symbol'] = option_symbol
+		tnplog.at[i,'Expiration'] =  option_symbol.split(',',1)[0]
+		tnplog.at[i,'Log_Date'] = dt.date.today()
+		optpath = ''.join([targetpath,option_symbol,'.csv'])
+		opt.to_csv(optpath,mode='w',header=opt.columns)
+	else:
+		continue
+tnplog.to_csv(logdir,mode='w',header=tnplog.columns)
+
+
+
+
+
+
+
+
+
+
+
+
+
