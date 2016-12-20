@@ -17,4 +17,28 @@ def tnp_summary(opt_data,strategy):
   report[´Exit_Percentage´] =
   
 def analyzer(opt_data,entry_perc,sell_perc,exit_strg):
-  
+  analysis = pd.DataFrame(columns=analysiscolumns)
+  if opt_data.ix[1][´low´] <= (opt_data.ix[1][´low´]*entry_perc):
+    analysis[´Entry´] = True
+  else:
+    analysis[´Entry´] = False
+  if exit_strg == ´EX4´ & opt_data[´high´].max() >= (opt_data.ix[1][´open´]*sell_perc):
+    analysis[´Win´] = True
+  elif exit_strg != ´EX4´ & opt_data.ix[2:6][´high´].max() >= (opt_data[´open´]*sell_perc):
+    analysis[´Win´] = True
+  else:
+    analysis[´Win´] = False
+  if analysis[´Win´] == False & exit_strg != ´EX1´ & opt_data.ix[6:10][´high´].max() >= (opt_data[´open´]*sell_perc):
+    analysis[´Successful_Exit´] = True
+  elif analysis[´Win´] == False & exit_strg != ´EX2´: 
+    analysis[´Successful_Exit´] = True
+  elif analysis[´Win´] == False & exit_strg != ´EX3´ & opt_data.ix[2:7][´high´].max() >= (opt_data[´open´]*sell_perc):  ?
+    analysis[´Successful_Exit´] = True
+  else: 
+    analysis[´Successful_Exit´] = False
+  if analysis[´Successful_Exit´] == False:
+    if exit_strg != ´EX1´:
+      analysis[´Escape_Percent´] = ((opt_data.ix[9][´close´]/opt_data.ix[1][´open´])/(opt_data.ix[1][´open´]*entry_perc))
+    if exit_strg != ´EX4´:
+      analysis[´Escape_Percent´] = ((opt_data.ix[19][´close´]/opt_data.ix[1][´open´])/(opt_data.ix[1][´open´]*entry_perc))
+    
