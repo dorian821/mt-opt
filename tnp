@@ -522,7 +522,7 @@ For i = 0 To 19
                 tnpsht.Cells(j + i, 44).Value = temp.Cells(t, bp).Value
                 tnpsht.Cells(j + i, 46).Value = temp.Cells(t, st).Value
                 temp.Range(temp.Cells(t, 2), temp.Cells(t, c)).Copy
-                tnpsht.Cells(j + i, 52).PasteSpecial xlPasteValues
+                tnpsht.Cells(j + i, 53).PasteSpecial xlPasteValues
             End If
         Next
 
@@ -577,32 +577,40 @@ exstr = Split(s, ".")(2)
 
 If exstr = "EX1" Then
       If tnpsht.Range(tnpsht.Cells(traderow+3,26),tnpsht.Cells(traderow+5,26)).Value >= tnpsht.Cells(strgrow,47).Value Then
-            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
-            
-      Else If tnpsht.Range(tnpsht.Cells(traderow+6,26),tnpsht.Cells(traderow+9,26)).Value >= tnpsht.Cells(strgrow,47).Value Then
-            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,52).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
             tnpsht.Cells(strgrow,49).Value = "True"
+      Else If tnpsht.Range(tnpsht.Cells(traderow+6,26),tnpsht.Cells(traderow+9,26)).Value >= tnpsht.Cells(strgrow,47).Value Then
+            tnpsht.Cells(strgrow,52).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,50).Value = "True"
       Else
-            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(traderow+10,28)/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,52).Value = tnpsht.Cells(traderow+10,28)/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,51).Value = "True"
       End If   
 Else If exstr = "EX2" Then
       If tnpsht.Range(tnpsht.Cells(traderow+3,26),tnpsht.Cells(traderow+6,26)).Value >= tnpsht.Cells(strgrow,47).Value Then
-            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,52).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,49).Value = "True"
       Else
-            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(traderow+6,28)/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,52).Value = tnpsht.Cells(traderow+6,28)/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,50).Value = "False"
+            tnpsht.Cells(strgrow,51).Value = "True"
       End If      
 Else If exstr = "EX3" Then
 Else If exstr = "EX4" Then
       If tnpsht.Range(tnpsht.Cells(traderow+3,26),tnpsht.Cells(traderow+20,26)).Value >= tnpsht.Cells(strgrow,47).Value Then
-            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,52).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,49).Value = "True"
       Else
-            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(traderow+20,28)/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,52).Value = tnpsht.Cells(traderow+20,28)/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,50).Value = "False"
+            tnpsht.Cells(strgrow,51).Value = "True"
       End If
 End If
 48 = Entry predetermined before PnL function
-49 = Exit
-50 = Escape
-51 = PnL
+49 = Win
+50 = Exit
+51 = Escape
+52 = PnL
 
 
 
