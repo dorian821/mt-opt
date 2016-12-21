@@ -387,6 +387,16 @@ For i = 1 To ro
         Exit For
     End If
 Next
+If tnpsht.Cells("Y" & traderow).Value > 0.001 Then
+      For j = 0 to 19
+            If tnpsht.Cells(traderow + j, 42).Value <> "" Then 
+                  tnpsht.Cells(traderow + j, 45).Value = tnpsht.Cells(traderow + j, 44).Value * tnpsht.Cells("Y" & traderow).Value
+                  tnpsht.Cells(traderow + j, 47).Value = tnpsht.Cells(traderow + j, 46).Value * tnpsht.Cells("Y" & traderow).Value
+            Else If tnpsht.Cells(traderow + j, 42).Value = "" Then
+            Exit For
+            End If
+      Next
+End If
 
 Workbooks(tnpsht.Cells(traderow, 9).Value & ".csv").Close (False)
 Workbooks(symb & ".csv").Close (False)
@@ -508,7 +518,7 @@ For i = 0 To 19
                 tnpsht.Cells(j + i, 44).Value = temp.Cells(t, bp).Value
                 tnpsht.Cells(j + i, 46).Value = temp.Cells(t, st).Value
                 temp.Range(temp.Cells(t, 2), temp.Cells(t, c)).Copy
-                tnpsht.Cells(j + i, 49).PasteSpecial xlPasteValues
+                tnpsht.Cells(j + i, 52).PasteSpecial xlPasteValues
             End If
         Next
 
@@ -554,3 +564,45 @@ Function getclosest(ByVal rng As Range, tgt As Double) As Double
         End If
     Next
 End Function
+
+Func PnL(s as string,traderow as integer,strgrow as integer)
+
+dim exstr as string
+dim r as integer
+exstr = Split(s, ".")(2)
+
+If exstr = "EX1" Then
+      If tnpsht.Range(tnpsht.Cells(traderow+3,26),tnpsht.Cells(traderow+10,26)).Value >= tnpsht.Cells(strgrow,47).Value Then
+            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
+      Else
+            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(traderow+10,28)/tnpsht.Cells(strgrow,45).Value
+      End If   
+Else If exstr = "EX2" Then
+      If tnpsht.Range(tnpsht.Cells(traderow+3,26),tnpsht.Cells(traderow+6,26)).Value >= tnpsht.Cells(strgrow,47).Value Then
+            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
+      Else
+            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(traderow+6,28)/tnpsht.Cells(strgrow,45).Value
+      End If      
+Else If exstr = "EX3" Then
+Else If exstr = "EX4" Then
+      If tnpsht.Range(tnpsht.Cells(traderow+3,26),tnpsht.Cells(traderow+20,26)).Value >= tnpsht.Cells(strgrow,47).Value Then
+            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
+      Else
+            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(traderow+20,28)/tnpsht.Cells(strgrow,45).Value
+      End If
+End If
+48 = Entry predetermined before PnL function
+49 = Exit
+50 = Escape
+51 = PnL
+
+
+
+
+
+
+
+
+
+
+
