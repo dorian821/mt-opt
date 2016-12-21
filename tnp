@@ -387,11 +387,15 @@ For i = 1 To ro
         Exit For
     End If
 Next
-If tnpsht.Cells("Y" & traderow).Value > 0.001 Then
+If tnpsht.Cells("Y" & traderow+1).Value > 0.001 Then
       For j = 0 to 19
             If tnpsht.Cells(traderow + j, 42).Value <> "" Then 
-                  tnpsht.Cells(traderow + j, 45).Value = tnpsht.Cells(traderow + j, 44).Value * tnpsht.Cells("Y" & traderow).Value
-                  tnpsht.Cells(traderow + j, 47).Value = tnpsht.Cells(traderow + j, 46).Value * tnpsht.Cells("Y" & traderow).Value
+                  tnpsht.Cells(traderow + j, 45).Value = tnpsht.Cells(traderow + j, 44).Value * tnpsht.Cells("Y" & traderow+1).Value         
+                  tnpsht.Cells(traderow + j, 47).Value = tnpsht.Cells(traderow + j, 46).Value * tnpsht.Cells("Y" & traderow+1).Value
+                  tnpsht.Cells(traderow + j, 51).Value = PnL(tnpsht.Cells(traderow + j, 42).Value,traderow,traderow + j)
+                  If tnpsht.Cells("Z" & traderow+1).Value <=  tnpsht.Cells(traderow + j, 45).Value Then
+                        tnpsht.Cells(traderow + j, 48).Value = "True"
+                  End If
             Else If tnpsht.Cells(traderow + j, 42).Value = "" Then
             Exit For
             End If
@@ -572,8 +576,12 @@ dim r as integer
 exstr = Split(s, ".")(2)
 
 If exstr = "EX1" Then
-      If tnpsht.Range(tnpsht.Cells(traderow+3,26),tnpsht.Cells(traderow+10,26)).Value >= tnpsht.Cells(strgrow,47).Value Then
+      If tnpsht.Range(tnpsht.Cells(traderow+3,26),tnpsht.Cells(traderow+5,26)).Value >= tnpsht.Cells(strgrow,47).Value Then
             tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
+            
+      Else If tnpsht.Range(tnpsht.Cells(traderow+6,26),tnpsht.Cells(traderow+9,26)).Value >= tnpsht.Cells(strgrow,47).Value Then
+            tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(strgrow,47).Value/tnpsht.Cells(strgrow,45).Value
+            tnpsht.Cells(strgrow,49).Value = "True"
       Else
             tnpsht.Cells(strgrow,51).Value = tnpsht.Cells(traderow+10,28)/tnpsht.Cells(strgrow,45).Value
       End If   
