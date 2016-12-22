@@ -99,18 +99,21 @@ else:
  tnpsummary = pd.DataFrame(columns=tnpsummarycolumns)
 tnplog =
 tnplog = tnplog[tnplog['Trade_#'] != tnpsummary['Trade_#']] #Test if this method works
-for t in tnplog.index:
- strg = tnplog.loc[t]['Strategy_Formula']
+for tx in tnplog.index:
+ strg = tnplog.loc[tx]['Strategy_Formula']
  exit_strg = strg.split(',',3)[2]
- d = tnplog.loc[t]['Trade_Date']
- symb = tnplog.loc[t]['Underlying_Symbol']
+ t = strg.split(',',3)[3].split('.',1)[0].split('',1)[0]
+ m = strg.split(',',3)[3].split('.',1)[1] 
+ d = tnplog.loc[tx]['Trade_Date']
+ symb = tnplog.loc[tx['Underlying_Symbol']
  stk = web(symb, 'yahoo', d, d)
  p = stk.loc[d]['open'].shift(1)
- opt_data = option_finder(...)
- analysis = analyzer(opt_data=opt_data,entry_perc=tnplog.loc[t]['Buy_Percent'],sell_perc=tnplog.loc[t]['Sell_Percent'],exit_strg=exit_strg,strg=strg)
- analysis['Trade_#'] = t
+ min_exp, exp, max_exp = next_monthlies(d=d)
+ opt_data = option_finder(opt=optpdata,symb=symb,strike=p,t=t,start=d,min_exp=min_exp,exp=exp,max_exp=max_exp,m=m)
+ analysis = analyzer(opt_data=opt_data,entry_perc=tnplog.loc[t]['Buy_Targer_%'],sell_perc=tnplog.loc[t]['Sell_Targer_%'],exit_strg=exit_strg,strg=strg)
+ analysis['Trade_#'] = tx
  tnpsummary = pd.concat([tnpsummary, analysis],axis=0)
 tnpsummary.to_csv(tnpsumpath, 'w', index=false,header=tnpsummarycolumns)
  
- 
+ #note! add buy and sell percentages to tnplogger
     
