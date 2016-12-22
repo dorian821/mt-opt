@@ -18,7 +18,7 @@ for d in dates.index:
 
 
 reportcolumns = ["Trade Date","Sort #","Strategy Formula","Option-Symbol","D2Op",
-                 "D2Hi","D2Lo","D2Cl","D2Vol","Entry?","Win?","Successful_Exit?","Escape","Exit_Percentage","Escape_Percentage",
+                 "D2Hi","D2Lo","D2Cl","D2Vol","Entry?","Win?","Successful_Exit?","Exit_Percentage","Escape?","Escape_Percentage",
                  "Profit/Loss","Day_Calc_Sell_Reached","Trade_Hi","Day_100%_Acheived","Running_Acct_Balance"]
  +    - 
  +    - Strategy Formula
@@ -45,43 +45,47 @@ def analyzer(opt_data,entry_perc,sell_perc,exit_strg):
   analysis['D2Lo'] = opt_data.ix[1]['Low']
   analysis['D2Cl'] = opt_data.ix[1]['close']
   analysis['D2Vol'] = opt_data.ix[1]['trade_volume']
+  sell_targ = sell_perc * opt_data.ix[1]['open']
+  
   if opt_data.ix[1][´low´] <= (opt_data.ix[1][´low´]*entry_perc):
     analysis[´Entry?´] = True
   else:
     analysis[´Entry?´] = False
     
-  if exit_strg == ´EX4´ & opt_data[´high´].max() >= (opt_data.ix[1][´open´]*sell_perc):
+  if exit_strg == ´EX4´ & opt_data.ix[2:19][´high´].max() >= (opt_data.ix[1][´open´]*sell_perc):
     analysis[´Win?´] = True
+    win = opt_data[opt_data[´high´] >= sell_targ]
+    analysis['Day_Calc_Sell_Reached'] = win.index[0] + 1
   elif exit_strg != ´EX4´ & opt_data.ix[2:6][´high´].max() >= (opt_data[´open´]*sell_perc):
     analysis[´Win?´] = True
   else:
     analysis[´Win?´] = False
     
   if analysis[´Win?´] == False & exit_strg != ´EX1´ & opt_data.ix[6:10][´high´].max() >= (opt_data[´open´]*sell_perc):
-    analysis[´Successful_Exit´] = True
+    analysis[´Successful_Exit?´] = True
     analysis[´Exit´] = (opt_data.ix[1][´low´]*entry_perc) * (1 + (sell_perc-entry_perc))
   elif analysis[´Win´] == False & exit_strg != ´EX2´: 
-    analysis[´Successful_Exit´] = True
+    analysis[´Successful_Exit?´] = True
     analysis[´Exit´] = (opt_data.ix[5][´close´])/(opt_data.ix[1][´low´]*entry_perc)
   elif analysis[´Win´] == False & exit_strg != ´EX3´ & opt_data.ix[2:7][´high´].max() >= (opt_data[´open´]*sell_perc):  ?
-    analysis[´Successful_Exit´] = True
+    analysis[´Successful_Exit?´] = True
     analysis[´Exit´] = (opt_data[´open´]*sell_perc)
   else: 
-    analysis[´Successful_Exit´] = False
+    analysis[´Successful_Exit?´] = False
     
-  if analysis[´Successful_Exit´] == False:
+  if analysis[´Successful_Exit?´] == False:
     if exit_strg != ´EX1´:
-     analysis[´Escape'] =  'True'
+     analysis[´Escape?'] =  'True'
      analysis[´Escape_Percent´] = ((opt_data.ix[9][´close´]/opt_data.ix[1][´open´])/(opt_data.ix[1][´open´]*entry_perc))
     if exit_strg != ´EX4´:
-     analysis[´Escape'] =  'True'
+     analysis[´Escape?'] =  'True'
      analysis[´Escape_Percent´] = ((opt_data.ix[19][´close´]/opt_data.ix[1][´open´])/(opt_data.ix[1][´open´]*entry_perc))
     
   if analysis[´Win´] == True:
-    analysis[´Profit/Loss´] = (opt_data.ix[1][´low´]*entry_perc) * (1 + (sell_perc-entry_perc))
-  elif analysis[´Win´] == False & analysis[´Successful_Exit´] == True:
-    analysis[´Profit/Loss´] = analysis.ix[0][´Exit´]
-  elif analysis[´Win´] == False & analysis[´Successful_Exit´] == False:  
-    analysis[´Profit/Loss´] = analysis[´Escape_Percent´]
+    analysis[´Profit/Loss´] = (opt_data.ix[1][´low´]*entry_perc) * (1 + (sell_perc-entry_perc)) * acct
+  elif analysis[´Win?´] == False & analysis[´Successful_Exit´] == True:
+    analysis[´Profit/Loss´] = analysis.ix[0][´Exit´] * acct
+  elif analysis[´Win?´] == False & analysis[´Successful_Exit´] == False:  
+    analysis[´Profit/Loss´] = analysis[´Escape_Percent´] * acct
   else:
     analysis[´Profit/Loss´] = 0
