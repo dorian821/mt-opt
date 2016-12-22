@@ -17,7 +17,7 @@ for d in dates.index:
 
 
 
-reportcolumns = ["Trade Date","Sort #","Strategy Formula","Option-Symbol","D2Op",
+tnpsummarycolumns = ["Trade_#","Trade Date","Sort #","Strategy Formula","Option-Symbol","D2Op",
                  "D2Hi","D2Lo","D2Cl","D2Vol","Entry?","Win?","Successful_Exit?","Exit_Percentage","Escape?","Escape_Percentage",
                  "Profit/Loss","Day_Calc_Sell_Reached","Trade_Hi","Day_100%_Acheived","Running_Acct_Balance"]
  +    - 
@@ -94,14 +94,24 @@ def analyzer(opt_data,entry_perc,sell_perc,exit_strg):
     
   return analysis
   
-tnpsummary =   
+if os.path.isfile(tnpsumpath):
+ tnpsummary =
+else:
+ tnpsummary = pd.DataFrame(columns=tnpsummarycolumns)
 tnplog =
 tnplog = tnplog[tnplog['Trade_#'] != tnpsummary['Trade_#']] #Test if this method works
-for d in tnplog.index:
- symb = tnplog.loc[d]['Underlying_Symbol']
+for t in tnplog.index:
+ strg = tnplog.loc[t]['Strategy_Formula']
+ exit_strg = strg.split(',',3)[2]
+ d = tnplog.loc[t]['Trade_Date']
+ symb = tnplog.loc[t]['Underlying_Symbol']
  stk = web(symb, 'yahoo', d, d)
- p = stk.loc[d]['open']
+ p = stk.loc[d]['open'].shift(1)
  opt_data = option_finder(...)
- analysis = analyzer(opt_data
+ analysis = analyzer(opt_data=opt_data,entry_perc=tnplog.loc[t]['Buy_Percent'],sell_perc=tnplog.loc[t]['Sell_Percent'],exit_strg=exit_strg,strg=strg)
+ analysis['Trade_#'] = t
+ tnpsummary = pd.concat([tnpsummary, analysis],axis=0)
+tnpsummary.to_csv(tnpsumpath, 'w', index=false,header=tnpsummarycolumns)
+ 
  
     
