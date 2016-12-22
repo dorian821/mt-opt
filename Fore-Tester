@@ -46,7 +46,9 @@ def analyzer(opt_data,entry_perc,sell_perc,exit_strg):
   analysis['D2Cl'] = opt_data.ix[1]['close']
   analysis['D2Vol'] = opt_data.ix[1]['trade_volume']
   sell_targ = sell_perc * opt_data.ix[1]['open']
-  
+  if opt_data.ix[2:19][´high´].max() >= opt_data.ix[1]['open'] * 2:
+   single_bagger = opt_data[opt_data.ix[2:19][´high´] >= opt_data.ix[1]['open'] * 2]
+   analysis['Day_100%_Acheived'] = single_bagger.index[0] + 1
   if opt_data.ix[1][´low´] <= (opt_data.ix[1][´low´]*entry_perc):
     analysis[´Entry?´] = True
   else:
@@ -54,7 +56,7 @@ def analyzer(opt_data,entry_perc,sell_perc,exit_strg):
     
   if exit_strg == ´EX4´ & opt_data.ix[2:19][´high´].max() >= (opt_data.ix[1][´open´]*sell_perc):
     analysis[´Win?´] = True
-    win = opt_data[opt_data[´high´] >= sell_targ]
+    win = opt_data[opt_data.ix[2:19][´high´] >= sell_targ]
     analysis['Day_Calc_Sell_Reached'] = win.index[0] + 1
   elif exit_strg != ´EX4´ & opt_data.ix[2:6][´high´].max() >= (opt_data[´open´]*sell_perc):
     analysis[´Win?´] = True
@@ -89,3 +91,17 @@ def analyzer(opt_data,entry_perc,sell_perc,exit_strg):
     analysis[´Profit/Loss´] = analysis[´Escape_Percent´] * acct
   else:
     analysis[´Profit/Loss´] = 0
+    
+  return analysis
+  
+tnpsummary =   
+tnplog =
+tnplog = tnplog[tnplog['Trade_#'] != tnpsummary['Trade_#']] #Test if this method works
+for d in tnplog.index:
+ symb = tnplog.loc[d]['Underlying_Symbol']
+ stk = web(symb, 'yahoo', d, d)
+ p = stk.loc[d]['open']
+ opt_data = option_finder(...)
+ analysis = analyzer(opt_data
+ 
+    
