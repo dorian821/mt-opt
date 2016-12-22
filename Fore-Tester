@@ -1,9 +1,8 @@
 
-start = date
-report_date = date
+start = dt.date.today() - dt.timedelta(days=210)
 end = dt.date.today() - dt.timedelta(days=30)
+dates = web('SPY', 'yahoo', start, end)
 
-# dates = web get spy stock start to end
 for d in dates.index:
  #Data  & Calcs
  #MT_Sorter
