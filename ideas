@@ -1084,7 +1084,7 @@ d = dt.datetime.today().date() - dt.timedelta(days=1)
 lcrcolumns = ['Stock_Symbol','Sort','Form_#','Level','Strategy_Formula','#_of_Transactions','#_in_Dataset','D2_Investible_Volume','Calc_Profit%','Win%','Net_Profit/Loss',
 			'Highest_Hi','Ratio_Net/Highest_Hi','Hist_Profit/Loss_per_Tx','#_TX>0','%_of_TX>0', '#_OF_"FALSE"_IN_WIN_CALC',
 			'Fail%','CALC._PROF/LOSS_ON_Fd_TXS','#_of_Exit_Attempts','%_Successful_Exits','Max_Drawdown','Max_%_Drawdown','%_of_TXs_w/_LOSS>50%',
-			'Catastrophic_Fail_%_(-80%)','AMT_AT_RISK','Buy_Target_%','Win_Period_10th','Win_Period_20th','Win_Period_40th','Win_Period_50th','Win_Period_60th']
+			'Catastrophic_Fail_%_(-80%)','AMT_AT_RISK','Buy_Target_%','Sell_Target_%','Win_Period_10th','Win_Period_20th','Win_Period_40th','Win_Period_50th','Win_Period_60th']
 
 	
 targetdir = 'C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\Level_Class_Reports\\' +d.strftime('%Y-%m-%d')+ '\\'
@@ -1107,7 +1107,7 @@ if 'Unnamed: 0' in lcreport.columns:
 lcr = lcr[['Stock_Symbol','Option','Strike','Sort','Form_#','Level','Strategy_Formula','#_of_Transactions','#_in_Dataset','D2_Investible_Volume','Calc_Profit%','Win%','Net_Profit/Loss',
 			'Highest_Hi','Ratio_Net/Highest_Hi','Hist_Profit/Loss_per_Tx','#_TX>0','%_of_TX>0', '#_OF_"FALSE"_IN_WIN_CALC',
 			'Fail%','CALC._PROF/LOSS_ON_Fd_TXS','#_of_Exit_Attempts','%_Successful_Exits','Max_Drawdown','Max_%_Drawdown','%_of_TXs_w/_LOSS>50%',
-			'Catastrophic_Fail_%_(-80%)','AMT_AT_RISK','Buy_Target_%','Win_Period_10th','Win_Period_20th','Win_Period_40th','Win_Period_50th','Win_Period_60th']]
+			'Catastrophic_Fail_%_(-80%)','AMT_AT_RISK','Buy_Target_%','Sell_Target_%','Win_Period_10th','Win_Period_20th','Win_Period_40th','Win_Period_50th','Win_Period_60th']]
 if os.path.isfile(path):
 	lcr.to_csv(path,mode='a',header=None)
 else: 
