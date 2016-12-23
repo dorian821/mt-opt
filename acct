@@ -1,0 +1,22 @@
+#filter (for each unique method) lcr by symb --> type --> stx --> b/s
+#create trd and append tnpsummary
+#use acct class to create acct object (dataframe) with attribs(features): mgmt_policy, current_balance, at_risk_balance, _
+                                                                          daily_profit/loss, daily_ROI
+                                                                          
+Class Account(object):
+  
+  def __init__(self,mgmt_policy=1, current_balance=0.0, at_risk_balance=0.0, daily_profit/loss=0.0, daily_ROI=0.0):
+                                                                          
+    self.mgmt_policy = mgmt_policy
+    self.current_balance = current_balance
+    self.at_risk_balance = at_risk_balance
+    self.daily_profit/loss = daily_profit/loss
+    self.daily_ROI = daily_ROI
+    
+  def current(data,date):
+    
+    
+    
+    
+  
+
