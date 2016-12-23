@@ -3,17 +3,31 @@
 #use acct class to create acct object (dataframe) with attribs(features): mgmt_policy, current_balance, at_risk_balance, _
                                                                           daily_profit/loss, daily_ROI
                                                                           
+#tnpsummary must include date of target_hit for each target analyzed (i.e. sell_targ, 20%, 50%, 75%, 100%)
+                                                                          
 Class Account(object):
   
-  def __init__(self,mgmt_policy=1, current_balance=0.0, at_risk_balance=0.0, daily_profit/loss=0.0, daily_ROI=0.0):
+  def __init__(self,data=pd.DataFrame(columns=('Current','At_Risk','Daily_Profit/Loss')),index,target,mgmt_policy=1, current_balance=0.0, at_risk_balance=0.0, daily_profit/loss=0.0, daily_ROI=0.0):
                                                                           
     self.mgmt_policy = mgmt_policy
     self.current_balance = current_balance
     self.at_risk_balance = at_risk_balance
     self.daily_profit/loss = daily_profit/loss
     self.daily_ROI = daily_ROI
+    self.data = data
+    self.index = index
+    self.target = target
     
-  def current(data,date):
+  def current_balance(self,date):
+    return current_balance
+    
+  def at_risk_balance(self,date):
+    return at_risk_balance
+    
+  def daily_profit/loss(self,date):
+    return daily_profit/loss
+    
+    
     
     
     
