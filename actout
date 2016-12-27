@@ -1,0 +1,65 @@
+Accounting Outline: 
+A.  We need flexibility in the formatting to accommodate the following criteria: 1.  Date or date range; 2. stock(s); 3. option position; 4. option expiration dates; 5. type of option i.e. put or call; 6. sort  and form number;  7. “At Risk Amt”/ trade; 8.  Time in the trade; 9. win percentage given the selected date range i.e. 80%+ or 90%+;  10.  Profit percentage, either calculated by program or selected i.e. 20% or 100%+.  And for each of the above, rather than narrowing the field with the criteria, we have an “All Trades” criteria.
+
+B.  We need the report to tell us:  1.  Given the selected criteria in A, 1.  how many trades during the given period (I’d call the first column “Trade #”);   2.  Investible market; 3. win percentage;  4. date entered the trade;  5.  date on which achieved calculated/selected profit;  6. Max potential profit for individual trade; 7. Date of max possible profit;  8. date of exit if the trade fails to produce a win;  9.  Type of exit i.e. calculated like exit strategy 2 or d20cl;  10. Running balance of at risk amt 11. Net Profit or loss on trade; 12. profit percent on individual trade; 13.  running balance of profit or loss.
+
+This would be ideal. Tell me if this is to much work.  what do you think?  Changes, additions, deletions?
+
+The flexibility desired in A can be had, but is limited by the interface of the program, which at this point is largely non-existent. Consequently, what I’m thinking is that we can generate a master report with all of the relevant data for the entire date range in question and then generate more selective reports based upon criteria which will select a sub-set of the master data set. 
+
+The master report will contain the following data points, joining the TnP summary with the accounting: 
+
+TnP Summary:
+
+    - Trade #
+    - Trade Date
+    - Sort #
+    - Strategy Formula
+    - D2 Average Investible Market
+    - Win %
+    - Option_Type
+    - Strike Position (stx)
+    - Option-Symbol
+    - D2 OHLCV
+    - entry?
+    - win?
+    - successful_exit?
+    - exit percentage
+    - escape percentage
+    - Trade’s profit/loss
+    - Day number when calc sell achieved (D2 -D20)
+    - Highest Hi as a percentage over purchase for the 20 day period
+    - If 20% achieved over D2 purchase, then the day that it was achieved (D2-D20)
+    - If 50% achieved over D2 purchase, then the day that it was achieved (D2-D20)
+    - If 75% achieved over D2 purchase, then the day that it was achieved (D2-D20)
+    - If 100% achieved over D2 purchase, then the day that it was achieved (D2-D20)
+    
+
+Accounting:
+
+    - Date
+    - Trades_To_Date
+    - mgmt_policy
+    - account_cash_balance
+    - at_risk_balance
+    - daily_profit/loss
+    - daily_ROI
+    - account_cash_balance 20%
+    - at_risk_balance 20%
+    - daily_profit/loss 20%
+    - daily_ROI 20%
+    - account_cash_balance 50%
+    - at_risk_balance 50%
+    - daily_profit/loss 50%
+    - daily_ROI 50%
+    - account_cash_balance 75%
+    - at_risk_balance 75%
+    - daily_profit/loss 75%
+    - daily_ROI 75%
+    - account_cash_balance 100%
+    - at_risk_balance 100%
+    - daily_profit/loss 100%
+    - daily_ROI 100%
+  
+
+We need to track only one trade per buy point, whether 20th% or 40th%.   I think the one we choose should be the one with the highest  historical profit.
