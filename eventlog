@@ -1,0 +1,8 @@
+
+#data must be filtered to contain only trades that were entered
+def event_logger(data,market_dates):
+entries: pd.Series((lambda x: x = market_dates.ix[market_dates.loc[x].getloc() + 1] for x in data['Trade_Date']),index=data.index,name='Entry_Date')
+?exits_c: pd.Series((lambda x, y: y = data['Calc_Exit_Day'], x = market_dates.ix[market_dates.loc[x].getloc() + y] for x in data['Trade_Date']),index=data.index,name='Entry_Date')
+
+
+
