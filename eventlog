@@ -25,7 +25,7 @@ exits_100_date: pd.Series(((lambda x: market_dates.ix[market_dates.loc[data.ix[x
 return pd.concat([entries_date,debits,exits_calc_date,calc_credits,exits_20_date,20_credits,exits_50_date,50_credits,exits_75_date,75_credits,exits_100_date,100_credits],axis=1)
 
 exit_col= exit_target(e.g. calc,20,50,75,100)
-book_columns = ['mgmt_policy', 'Cash_Balance', 'at_risk_balance', 'daily_profit/loss', 'daily_ROI', 'Debit', 'Credit']
+book_columns = ['mgmt_policy', 'Cash_Balance', 'At_Risk_Balance', 'Daily_Profit/Loss', 'daily_ROI', 'Debit', 'Credit']
 
 def bookkeeping(eventlog,start,end,exit_date_col,exit_col,acct):
 books = pd.DataFrame(index=pd.Series(eventlog['entries_date',exit_col].unique(),name='Date'),columns=book_columns)
@@ -36,5 +36,8 @@ for d in eventlog[exit_date_col].unique():
 books.at[d,'Credit'] = eventlog[[exit_col]][eventlog[exit_date_col] == d].sum()
 for d in books.index:
 books['Daily_Profit/Loss'] = books['Credit']-books['Debit']
-books['At_Risk_Balance'] = 
+days_cum_debit = eventlog['Debits'][books.index <= d].sum()
+days_cum_closures = eventlog['Debits'][eventlog[exit_date_col] <= d].sum()
+books['At_Risk_Balance'] = days_cum_debit - days_cum_closures
+
 
