@@ -36,10 +36,13 @@ for d in eventlog[exit_date_col].unique():
 books.at[d,'Credit'] = eventlog[[exit_col]][eventlog[exit_date_col] == d].sum()
 for d in books.index:
 books.at[d,'Daily_Profit/Loss'] = books['Credit']-books['Debit']
-days_cum_debit = eventlog['Debits'][books.index <= d].sum()
+days_cum_debit = eventlog['Debits'][eventlog['entries_date'] <= d].sum()
 days_cum_closures = eventlog['Debits'][eventlog[exit_date_col] <= d].sum()
 books.at[d,'At_Risk_Balance'] = days_cum_debit - days_cum_closures
-books.at[d,'Daily_ROI'] = 
+books.at[d,'Daily_ROI'] = eventlog[exit_col][eventlog[exit_date_col] <= d].sum()/eventlog['Debits'][eventlog['entries_date'] <= d].sum() 
+x = books.index.getloc(d) - 1
+books.at[d,'Cash_Balance'] = books.ix[x]['Cash_Balance'] + books.ix[d]['Debit'] + books.ix[d]['Credit']
+return books
 
 
 
