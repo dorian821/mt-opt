@@ -31,10 +31,12 @@ tnpsummary = pd.concat([tnpsummary,eventlog])
 exit_col= exit_target(e.g. calc,20,50,75,100)
 book_columns = ['Mgmt_Policy', 'Cash_Balance', 'At_Risk_Balance', 'Daily_Profit/Loss', 'Daily_ROI', 'Debit', 'Credit']
 
-opt_criteria_column_dict = {'symbs':'Stock_Symbol','stx':'Strike','opt_type':'Option','sort':'Sort','form':'Form_#','win_%':'Win%','profit_%':'Calc_Profit%'}
+opt_criteria_column_dict = {'symbs':'Stock_Symbol','stx':'Strike','opt_type':'Option','sort':'Sort','form':'Form_#','win_%':'Win%','profit_%':'Calc_Profit%','d2_invst_min':'D2_Investible_Volume'}
 opt_criteria = [symbs,stx,opt_type,sort,form,win_%,profit_%] #Need to add exp_frame=None, at_risk-trade=None,trade_duration=None (trade duration variable based upon sell target)
+def names(thing):
+return [name for name,ref in globals().iteritems() if ref is thing]
 
-def bookkeeping(eventlog,start,end,exit_date_col,exit_col,acct,symbs=None,stx=None,exp_frame=None,opt_type=None,sort=None,form=None,at_risk-trade=None,trade_duration=None,win_%=None,profit_%=None):
+def bookkeeping(eventlog,start,end,exit_date_col,exit_col,acct,symbs=None,stx=None,exp_frame=None,opt_type=None,sort=None,form=None,at_risk-trade=None,trade_duration=None,win_%=None,profit_%=None,d2_invst_min=None):
 #select subset#
 eventlog.set_index('Entry_Date',drop=False)
 eventlog = eventlog[start:end]
@@ -42,6 +44,8 @@ eventlog.set_index('Tranx_#')
 for crit in opt_criteria:
   if crit is not None:
     eventlog = eventlog[eventlog[opt_criteria_column_dict[crit]].isin(crit)]
+  if crit == d2_invst:
+    eventlog = eventlog[eventlog[opt_criteria_column_dict[crit]] >= crit]
 
 #Calculate Books#
 books = pd.DataFrame(index=pd.Series(eventlog['Entry_Date',exit_col].unique(),name='Date'),columns=book_columns)
