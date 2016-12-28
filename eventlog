@@ -5,6 +5,7 @@ exit_col = date of exit
 credit_col_name = e.g. 'Calc_Target_Exit_PnL'
 D20Cl% needs to be included in the tnpsummary
 def event_logger(data,market_dates): #rowwise dataframe for each acct change remember Tx# is the index!!
+data = 
 entries_date: pd.Series((lambda x: market_dates.ix[market_dates.loc[x].getloc() + 1] for x in data['Trade_Date']),index=data.index,name='Entry_Date')
 debits = pd.Series(acct*(data['D2Op']*data['Buy_Target_Percentage']),index=data.index,name='Debits')
 #debit = pd.concat([entries_date,debits],axis=1)
@@ -22,13 +23,19 @@ exits_75_date: pd.Series(((lambda x: market_dates.ix[market_dates.loc[data.ix[x]
 75calc_cred = pd.concat([exits_75_date,75_credits],axis=1)
 exits_100_date: pd.Series(((lambda x: market_dates.ix[market_dates.loc[data.ix[x]['Trade_Date']].getloc() + data.ix[x]['100_Exit_Day']]) for x in data.index),index=data.index,name='100_Exit_Date')
 #100_credits: pd.Series((np.where(data['Exit_100%_Percentage'],acct*2,acct*(D20Cl%-data[Buy_Target_Percentage']+1),index=data.index,name='100%_Exit_PnL')
-return pd.concat([entries_date,debits,exits_calc_date,calc_credits,exits_20_date,20_credits,exits_50_date,50_credits,exits_75_date,75_credits,exits_100_date,100_credits],axis=1)
+eventlog.index.rename('Tranx_#')
+eventlog = pd.concat([entries_date,debits,exits_calc_date,calc_credits,exits_20_date,20_credits,exits_50_date,50_credits,exits_75_date,75_credits,exits_100_date,100_credits],axis=1)
+return eventlog
+
 
 exit_col= exit_target(e.g. calc,20,50,75,100)
 book_columns = ['Mgmt_Policy', 'Cash_Balance', 'At_Risk_Balance', 'Daily_Profit/Loss', 'Daily_ROI', 'Debit', 'Credit']
 
 def bookkeeping(eventlog,start,end,exit_date_col,exit_col,acct):
-books = pd.DataFrame(index=pd.Series(eventlog['entries_date',exit_col].unique(),name='Date'),columns=book_columns)
+eventlog.set_index('Entry_Date',drop=False)
+eventlog = eventlog[start:end]
+eventlog.set_index('Tranx_#')
+books = pd.DataFrame(index=pd.Series(eventlog['Entry_Date',exit_col].unique(),name='Date'),columns=book_columns)
 books.at[start,'Cash_Balance'] = acct
 for d in eventlog['entries_date'].unique():
 books.at[d,'Debit'] = eventlog[['Debits']][eventlog['Entry_Date'] == d].sum()
