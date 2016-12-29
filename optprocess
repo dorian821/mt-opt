@@ -22,10 +22,15 @@ def phi(data):
 def mu(data):
   high_swings: 2-3 day linear fit of high values count # of positive/negative switches
   low_swings: " "
-  if abs(high_swings.max()) > abs(low_swings.max())
+  beta = max(abs(high_swings.max()),abs(low_swings.min())
   alpha_mu = average of the two?
+  return alpha, beta
 
-def beta_mu(data): #2-3 day rolling max ranges 
+#indication prep process
+indication_dict = {}
+for indication in data_calcs.columns:
+  indication_dict[indication] = [data[indication].dtype,
+  
   
     
   
