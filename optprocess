@@ -33,6 +33,7 @@ for indication in data_calcs.columns:
   if indication_dict[indication].str.contains(float):
     indication_dict[indication][1] = sigma(data[indication],n_parcels=20)
   
+#estimate # of possible combinations to be tested
     
   
     
