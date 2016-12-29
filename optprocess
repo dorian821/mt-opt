@@ -19,12 +19,13 @@ def phi(data):
   return phi
   
 #volatility -- can measure number of swings (alpha) or violence of swings (beta) -- Requires data length of 2-3+
-def alpha_mu(data):
+def mu(data):
   high_swings: 2-3 day linear fit of high values count # of positive/negative switches
   low_swings: " "
+  if abs(high_swings.max()) > abs(low_swings.max())
   alpha_mu = average of the two?
 
-def beta_mu(data):
+def beta_mu(data): #2-3 day rolling max ranges 
   
     
   
