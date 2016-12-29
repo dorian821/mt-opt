@@ -1,0 +1,30 @@
+#data point range for parcelized categorization
+def sigma(data,indic_col,n_parcels=20):
+  sigma = (data[indic_col].max() - data[indic_col].min())/(2*n_parcels)
+  return sigma
+
+#angle of movement
+def theta(data): #data is slice beginning with size of period, perhaps better to structure process differently to calculate theta for many periods  simultaneously
+  theta = np.max(abs(data['high'].max()-data.ix[0]['open']),(abs(data['low'].min()-data.ix[0]['open'])))/len(data)
+  return theta
+
+#directionality
+def phi(data):
+  if abs(data['high'].max()-data.ix[0]['open']) > abs(data['low'].min()-data.ix[0]['open']):  
+    phi = abs(data['high'].max()-data.ix[0]['open'])/abs(data['low'].min()-data.ix[0]['open'])
+  elif abs(data['high'].max()-data.ix[0]['open']) < abs(data['low'].min()-data.ix[0]['open']):
+    phi = -1*(abs(data['low'].min()-data.ix[0]['open'])/abs(data['high'].max()-data.ix[0]['open']))
+  else:
+    phi = 0
+  return phi
+  
+#volatility -- can measure number of swings (alpha) or violence of swings (beta) -- Requires data length of 2-3+
+def alpha_mu(data):
+  high_swings: 2-3 day linear fit of high values count # of positive/negative switches
+  low_swings: " "
+  alpha_mu = average of the two?
+
+def beta_mu(data):
+  
+    
+  
