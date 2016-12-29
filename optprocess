@@ -32,8 +32,15 @@ for indication in data_calcs.columns:
   indication_dict[indication][0] = data[indication].dtype
   if indication_dict[indication].str.contains(float):
     indication_dict[indication][1] = sigma(data[indication],n_parcels=20)
+  else:
+    indication_dict[indication][1] = 0
   
 #estimate # of possible combinations to be tested
+
+#need to order combination process
+  #how?
+    #1) indexing: could codify each combination, assign a number and then cycle through the range containing all numbers
+    #2) elimination: could run all combinations with a 'base' indication and then when finished proceed to the next 'base' indication having removed the prior from the pool of indications
     
   
     
