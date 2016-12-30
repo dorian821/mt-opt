@@ -43,26 +43,50 @@ for indication in data_calcs.columns:
     indication_dict[indication][1] = 0
     
     
-from itertools import chain, combinations
+import itertools as it
+
+#import chain, combinations, product
 def all_subsets(ss):
   subsets = pd.Seies(chain(*map(lambda x: combinations(ss, x), range(0, len(ss)+1))),name='Subsets_' + dt.datetime.today().date() 
   return subsets
   
 max_combo_length = 5?
-
+base_report_columns = ['Combo','Combo_Values','Theta_(Angle)','Phi_(Directionality)','Alpha_Mu_(Volatility-#_of_Swings)','Beta_Mu_(Violence_of_Swings)']
+#broadcast 'Combo','Combo_Values' into DF to be joined with base report
 #get subsets of indications
+base_report_df = pd.DataFrame(index=?Unknown value TBD?, columns=base_report_columns)
+sorted_df = raw_df
 indication_combos = all_subsets(data)
 for combo in indication_combos:
   if len(combo) < max_combo_length:   
     for value in indication_df[combo[0]]:
       combo_values = map(lambda indic: indication_df[indic],combo[1:])
-      value_combinations = combinations([value,combo_values], len(combo))
+      value_combinations = it.product([value,combo_values], len(combo))
       
       for comval in value_combinations:
         for val in comval:
           if val.dtype.str.contains('float'):
-            indication_dict[indication][1]
+            sorted_df = sorted_df[sorted_df[indic] < val + indication_dict[indication][1]] & sorted_df[sorted_df[indic] > val - indication_dict[indication][1]]
+          else:
+            sorted_df = sorted_df[sorted_df[indic] == val]
+        #run analsis --> copy to base_report_df
+        for d in sorted_df.index
+          price_data = raw_data.ix[d:raw_data.Index.get_loc(d) + period]['Open','High','Low','Close']
+          th = theta(price_data)
+          ph = theta(price_data)
+          a_my, b_my = mu(price_data)          
+          comval_thetas = comval_thetas.append(th)
+          comval_phis =  comval_phis.append(ph)
+          comval_alpha_mus = comval_alpha_mus.append(a_my)
+          comval_beta_mus = comval_beta_mus.append(b_my)         
           
+          base_report_df.at[i,'Theta_(Angle)'] = theta(price_data)
+          base_report_df.at[i,'Phi_(Directionality)'] = phi(price_data)
+          base_report_df.at[i,'Phi_(Directionality)'],  base_report_df.at[i,'Beta_Mu_(Violence_of_Swings)'] = mu(price_data)
+        
+        
+        
+            
       
       
   
