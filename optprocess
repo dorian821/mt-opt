@@ -36,7 +36,7 @@ indication_df = pd.DataFrame(index=np.arange(100))
 indication_dict = {}
 for indication in data_calcs.columns:
   indication_dict[indication][0] = data[indication].dtype
-  if indication_dict[indication].str.contains(float):
+  if indication_dict[indication][0].str.contains('float'):
     indication_dict[indication][1] = sigma(data[indication],n_parcels=20)
     indication_df = pd.concat([indication_df,anchors(data[indication],n_parcels=20)],axis=1)
   else:
@@ -48,9 +48,23 @@ def all_subsets(ss):
   subsets = pd.Seies(chain(*map(lambda x: combinations(ss, x), range(0, len(ss)+1))),name='Subsets_' + dt.datetime.today().date() 
   return subsets
   
+max_combo_length = 5?
+
 #get subsets of indications
 indication_combos = all_subsets(data)
 for combo in indication_combos:
+  if len(combo) < max_combo_length:   
+    for value in indication_df[combo[0]]:
+      combo_values = map(lambda indic: indication_df[indic],combo[1:])
+      value_combinations = combinations([value,combo_values], len(combo))
+      
+      for comval in value_combinations:
+        for val in comval:
+          if val.dtype.str.contains('float'):
+            indication_dict[indication][1]
+          
+      
+      
   
 #estimate # of possible combinations to be tested
 
