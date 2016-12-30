@@ -1,3 +1,8 @@
+#set anchor values : # of anchors = 2 * # of parcel
+def anchors(series,n_parcels=20):
+  anchors = pd.Series(map(lambda x: series.quantile(q=x), np.arange(n_parcels * 2) + 1),index=np.arange(n_parcels * 2),name=''.join([series.name,'_Anchors']))
+  return anchors
+
 #data point range for parcelized categorization
 def sigma(series,n_parcels=20):
   sigma = (series.max() - series.min())/(2*n_parcels)
@@ -27,13 +32,25 @@ def mu(data):
   return alpha, beta
 
 #indication prep process
+indication_df = pd.DataFrame(index=np.arange(100))
 indication_dict = {}
 for indication in data_calcs.columns:
   indication_dict[indication][0] = data[indication].dtype
   if indication_dict[indication].str.contains(float):
     indication_dict[indication][1] = sigma(data[indication],n_parcels=20)
+    indication_df = pd.concat([indication_df,anchors(data[indication],n_parcels=20)],axis=1)
   else:
     indication_dict[indication][1] = 0
+    
+    
+from itertools import chain, combinations
+def all_subsets(ss):
+  subsets = pd.Seies(chain(*map(lambda x: combinations(ss, x), range(0, len(ss)+1))),name='Subsets_' + dt.datetime.today().date() 
+  return subsets
+  
+#get subsets of indications
+indication_combos = all_subsets(data)
+for combo in indication_combos:
   
 #estimate # of possible combinations to be tested
 
@@ -41,7 +58,16 @@ for indication in data_calcs.columns:
   #how?
     #1) indexing: could codify each combination, assign a number and then cycle through the range containing all numbers
     #2) elimination: could run all combinations with a 'base' indication and then when finished proceed to the next 'base' indication having removed the prior from the pool of indications
-    
+
+
+#float anchoring and filtering process
+#generate anchors as series of 00.00 floats
+#use sigma to generate filter
+#apply filter
+
+
+#generate combination codes
+#run through each code
   
     
   
