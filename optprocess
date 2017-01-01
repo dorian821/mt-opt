@@ -20,7 +20,7 @@ def phi(data):
   elif abs(data['high'].max()-data.ix[0]['open']) < abs(data['low'].min()-data.ix[0]['open']):
     phi = -1*(abs(data['low'].min()-data.ix[0]['open'])/abs(data['high'].max()-data.ix[0]['open']))
   else:
-    phi = 0
+    phi = 1
   return phi
   
 #volatility -- can measure number of swings (alpha) or violence of swings (beta) -- Requires data length of 2-3+
@@ -55,9 +55,11 @@ base_report_columns = ['Combo','Combo_Values','Theta_(Angle)','Phi_(Directionali
 #broadcast 'Combo','Combo_Values' into DF to be joined with base report
 #get subsets of indications
 base_report_df = pd.DataFrame(index=?Unknown value TBD?, columns=base_report_columns)
-sorted_df = raw_df
+
 indication_combos = all_subsets(data)
+i = 0 
 for combo in indication_combos:
+  sorted_df = raw_df
   if len(combo) < max_combo_length:   
     for value in indication_df[combo[0]]:
       combo_values = map(lambda indic: indication_df[indic],combo[1:])
@@ -78,11 +80,30 @@ for combo in indication_combos:
           comval_thetas = comval_thetas.append(th)
           comval_phis =  comval_phis.append(ph)
           comval_alpha_mus = comval_alpha_mus.append(a_my)
-          comval_beta_mus = comval_beta_mus.append(b_my)         
+          comval_beta_mus = comval_beta_mus.append(b_my)
           
-          base_report_df.at[i,'Theta_(Angle)'] = theta(price_data)
-          base_report_df.at[i,'Phi_(Directionality)'] = phi(price_data)
-          base_report_df.at[i,'Phi_(Directionality)'],  base_report_df.at[i,'Beta_Mu_(Violence_of_Swings)'] = mu(price_data)
+        the_c = comval_thetas.mean()
+        phi_c = comval_phis.mean()
+        alph_mu_c = comval_alpha_mus.mean()
+        beta_mu_c =  comval_beta_mus.mean()     
+        base_report_df.at[i,'Indication_Combination'] = combo
+        base_report_df.at[i,'Combo_Values'] = comval
+        base_report_df.at[i,'Theta_(Angle)'] = the_c
+        base_report_df.at[i,'Phi_(Directionality)'] = phi_c
+        base_report_df.at[i,'Alpha_Mu_(Volatility-#_of_Swings)'] = alph_mu_c
+        base_report_df.at[i,'Beta_Mu_(Violence_of_Swings)'] = beta_mu_c
+        i = i + 1
+report_theta = (base_report[base_report['Theta_(Angle)'] >= base_report['Theta_(Angle)'].quantile(q=.95)])
+report_theta['Criteria'] = 'Theta'
+report_phi = (base_report[base_report['Phi_(Directionality)'] >= abs(base_report['Phi_(Directionality)']).quantile(q=.95)])
+report_phi['Criteria' = 'Phi'
+report_alpha_mu = (base_report[base_report['Alpha_Mu_(Volatility-#_of_Swings)'] >= base_report['Alpha_Mu_(Volatility-#_of_Swings)'].quantile(q=.95)])
+report_alpha_mu['Criteria'] = 'Alpha_Mu'
+report_beta_mu = (base_report[base_report['Beta_Mu_(Volatility-#_of_Swings)'] >= base_report['Beta_Mu_(Volatility-#_of_Swings)'].quantile(q=.95)])
+report_beta_mu['Criteria'] = 'Beta_Mu'
+report = pd.concat([report_theta,report_phi,report_alpha_mu,report_beta_mu],axis=0)
+report.to_csv(reportpath,index=True,headers=report.columns)
+
         
         
         
