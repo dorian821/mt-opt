@@ -87,6 +87,7 @@ for combo in indication_combos:
         alph_mu_c = comval_alpha_mus.mean()
         beta_mu_c =  comval_beta_mus.mean()     
         base_report_df.at[i,'Indication_Combination'] = combo
+        
         base_report_df.at[i,'Combo_Values'] = comval
         base_report_df.at[i,'Theta_(Angle)'] = the_c
         base_report_df.at[i,'Phi_(Directionality)'] = phi_c
@@ -101,7 +102,7 @@ report_alpha_mu = (base_report[base_report['Alpha_Mu_(Volatility-#_of_Swings)'] 
 report_alpha_mu['Criteria'] = 'Alpha_Mu'
 report_beta_mu = (base_report[base_report['Beta_Mu_(Volatility-#_of_Swings)'] >= base_report['Beta_Mu_(Volatility-#_of_Swings)'].quantile(q=.95)])
 report_beta_mu['Criteria'] = 'Beta_Mu'
-report = pd.concat([report_theta,report_phi,report_alpha_mu,report_beta_mu],axis=0)
+report = pd.concat([indic_data,report_theta,report_phi,report_alpha_mu,report_beta_mu],axis=0)
 report.to_csv(reportpath,index=True,headers=report.columns)
 
         
