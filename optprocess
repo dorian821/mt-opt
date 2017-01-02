@@ -74,29 +74,35 @@ for combo in indication_combos:
             sorted_df = sorted_df[sorted_df[indic] < val + indication_dict[indication][1]] & sorted_df[sorted_df[indic] > val - indication_dict[indication][1]]
           else:
             sorted_df = sorted_df[sorted_df[indic] == val]
-        #run analsis --> copy to base_report_df
-        for d in sorted_df.index
-          price_data = raw_data.ix[d:raw_data.Index.get_loc(d) + period]['Open','High','Low','Close']
-          th = theta(price_data)
-          ph = theta(price_data)
-          a_my, b_my = mu(price_data)          
-          comval_thetas = comval_thetas.append(th)
-          comval_phis =  comval_phis.append(ph)
-          comval_alpha_mus = comval_alpha_mus.append(a_my)
-          comval_beta_mus = comval_beta_mus.append(b_my)
-          
-        the_c = comval_thetas.mean()
-        phi_c = comval_phis.mean()
-        alph_mu_c = comval_alpha_mus.mean()
-        beta_mu_c =  comval_beta_mus.mean()     
-        base_report_df.at[i,'Indication_Combination'] = combo
-        
-        base_report_df.at[i,'Combo_Values'] = comval
-        base_report_df.at[i,'Theta_(Angle)'] = the_c
-        base_report_df.at[i,'Phi_(Directionality)'] = phi_c
-        base_report_df.at[i,'Alpha_Mu_(Volatility-#_of_Swings)'] = alph_mu_c
-        base_report_df.at[i,'Beta_Mu_(Violence_of_Swings)'] = beta_mu_c
-        i = i + 1
+        if len(sorted_df) < 5:
+          base_report_df.at[i,'Indication_Combination'] = combo
+          base_report_df.at[i,'Combo_Values'] = comval
+          base_report_df.iloc[i]['Theta_(Angle)','Phi_(Directionality)','Alpha_Mu_(Volatility-#_of_Swings)','Beta_Mu_(Violence_of_Swings)'] = np.nan
+          null row base_report
+          continue
+        else: 
+          #run analsis --> copy to base_report_df
+          for d in sorted_df.index
+            price_data = raw_data.ix[d:raw_data.Index.get_loc(d) + period]['Open','High','Low','Close']
+            th = theta(price_data)
+            ph = theta(price_data)
+            a_my, b_my = mu(price_data)          
+            comval_thetas = comval_thetas.append(th)
+            comval_phis =  comval_phis.append(ph)
+            comval_alpha_mus = comval_alpha_mus.append(a_my)
+            comval_beta_mus = comval_beta_mus.append(b_my)
+
+          the_c = comval_thetas.mean()
+          phi_c = comval_phis.mean()
+          alph_mu_c = comval_alpha_mus.mean()
+          beta_mu_c =  comval_beta_mus.mean()     
+          base_report_df.at[i,'Indication_Combination'] = combo
+          base_report_df.at[i,'Combo_Values'] = comval
+          base_report_df.at[i,'Theta_(Angle)'] = the_c
+          base_report_df.at[i,'Phi_(Directionality)'] = phi_c
+          base_report_df.at[i,'Alpha_Mu_(Volatility-#_of_Swings)'] = alph_mu_c
+          base_report_df.at[i,'Beta_Mu_(Violence_of_Swings)'] = beta_mu_c
+          i = i + 1
 report_indications = base_report[indic_data.columns]
 report_theta = (base_report[base_report['Theta_(Angle)'] >= base_report['Theta_(Angle)'].quantile(q=.95)])
 report_theta['Criteria'] = 'Theta'
@@ -142,6 +148,8 @@ Floats:
     3d  %D
     20/2 Bollinger Rank
     20/2 Keltner Rank
+    20 RSI
+    
   Minimally Parcelized 20-anchors:
     5d  SMA Norm
     14d SMA Norm
@@ -161,14 +169,29 @@ Floats:
   
 
   
-Boolean:
-  14d-5d CCI-Div
-  14d-8d CCI-Div
-  14d-13d CCI-Div
-  20d-5d CCI-Div
-  20d-8d CCI-Div
-  20d-13d CCI-Div
+Discrete:
+  14d-5d CCI-Div-+
+  14d-8d CCI-Div-+
+  14d-13d CCI-Div-+
+  20d-5d CCI-Div-+
+  20d-8d CCI-Div-+
+  20d-13d CCI-Div-+
+  14d-5d CCI-Div--
+  14d-8d CCI-Div--
+  14d-13d CCI-Div--
+  20d-5d CCI-Div--
+  20d-8d CCI-Div--
+  20d-13d CCI-Div--
+  
   K-D Positive/Negative?
+  20 RSI Div +
+  20 RSI Div -
+  10d MACD Div +
+  10d MACD Div -
+  10d MACD Div +
+  10d MACD Div -
+  
+Boolean:  
   5/14 SMA Crossover
   14/20 SMA Crossover
   50/100 SMA Crossover
@@ -177,6 +200,14 @@ Boolean:
   14/20 SMA Crossunder
   50/100 SMA Crossunder
   100/200 SMA Crossunder
+  5/14 SMA Over
+  14/20 SMA Over
+  50/100 SMA Over
+  100/200 SMA Over
+  5/14 SMA Under
+  14/20 SMA Under
+  50/100 SMA Under
+  100/200 SMA Under
   5/14 EMA Crossover
   14/20 EMA Crossover
   50/100 EMA Crossover
@@ -185,6 +216,19 @@ Boolean:
   14/20 EMA Crossunder
   50/100 EMA Crossunder
   100/200 EMA Crossunder
+  5d Blowest
+  10d Blowest
+  20d Blowest
+  50d Blowest
+  100d Blowest
+  200d Blowest
+  5d HHighest
+  10d HHighest
+  20d HHighest
+  50d HHighest
+  100d HHighest
+  200d HHighest
+  
   
 Possible:
   Candlesticks:
