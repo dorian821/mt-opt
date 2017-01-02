@@ -1,0 +1,29 @@
+Basic Functionality:
+  Strategy Reporting:
+    MT Auto:
+      Daily:
+        TNP
+        TnP Summary
+        Tiered H-Link Display of All Reports & Graphs:> Filtering by Date,Symbol,Stx,etc..
+          Reports:
+            LCR
+            Sorts
+            Raw            
+      Historical:
+        TNP
+        TnP Summary
+        Tiered H-Link Display of All Reports & Graphs
+          Reports:
+            LCR
+            Sorts
+            Raw
+    S&S:
+      Master:
+        Consolidated Report --> Filtering by Date,Symbol,Stx,etc..
+          H-Link by date to price history        
+        Analysis: 
+          Filtering by feature 
+          Correlation with tech-indics
+          
+          
+          
