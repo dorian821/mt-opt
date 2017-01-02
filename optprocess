@@ -17,6 +17,13 @@ def bottoming(series):
     return True
   else: 
     return False
+    
+def swing_volatility(series):
+  if (series[0] * series[1]) < 0:
+    return abs(series[0] - series[1])
+  else: 
+    return np.nan
+  
 
 
 
@@ -29,12 +36,13 @@ def peaks(series):
 def peaks_troughs(hi_series,lo_series):
   hi_slopes = pd.rolling_apply(arg=series,func=three_linest,window=3)
   hi_swings = pd.rolling_apply(arg=slopes,func=topping,window=2)
-  hi_swing_
+  hi_swing_vol = pd.rolling_apply(arg=slopes,func=swing_volatility,window=2).quantile(q=.8)
   peak_count = count(hi_swings)  
   lo_slopes = pd.rolling_apply(arg=series,func=three_linest,window=3)
   lo_swings = pd.rolling_apply(arg=slopes,func=bottoming,window=2)
+  lo_swing_vol = pd.rolling_apply(arg=slopes,func=swing_volatility,window=2).quantile(q=.8)
   trough_count = count(lo_swings)
-  return peak_count,trough_count
+  return peak_count,hi_swing_vol, trough_count, lo_swing_vol
 
 
 
@@ -65,10 +73,9 @@ def phi(data):
   
 #volatility -- can measure number of swings (alpha) or violence of swings (beta) -- Requires data length of 2-3+
 def mu(data):
-  high_swings = topping(data['High'])
-  low_swings = bottoming(data['Low'])
-  beta = max(abs(high_swings.max()),abs(low_swings.min())
-  alpha = 
+  high_swings, hi_alpha, lo_swings, lo_alpha = peaks_troughs(data['High'],data['Low'])
+  alpha = np.max(hi_alpha,lo_alpha)
+  beta = np.max(high_swings, lo_swings)
   return alpha, beta
 
 #indication prep process
