@@ -1,5 +1,36 @@
-def peaks(series,size):
 
+
+
+
+def three_linest(y,x=np.arange(3),deg=1):
+ 	l = np.polyfit(y=y, x=x, deg=1)[0]
+ 	return l
+
+def topping(series):
+  if (series[0] > 1) & (series[1] < 1):
+    return True
+  else: 
+    return False
+
+def bottoming(series):
+  if (series[0] > 1) & (series[1] < 1):
+    return True
+  else: 
+    return False
+
+
+
+
+def peaks(series):
+  slopes = pd.rolling_apply(arg=series,func=three_linest,window=3)
+  peak_count = count(pd.rolling_apply(arg=slopes,func=topping,window=2))  
+  return peak_count
+
+def troughs(series):
+  slopes = pd.rolling_apply(arg=series,func=three_linest,window=3)
+  swings = pd.rolling_apply(arg=slopes,func=bottoming,window=2)
+  trough_count = count(swings)  
+  return trough_count
 
 
 
@@ -30,10 +61,10 @@ def phi(data):
   
 #volatility -- can measure number of swings (alpha) or violence of swings (beta) -- Requires data length of 2-3+
 def mu(data):
-  high_swings: 2-3 day linear fit of high values count # of positive/negative switches
-  low_swings: " "
+  high_swings = topping(data['High'])
+  low_swings = bottoming(data['Low'])
   beta = max(abs(high_swings.max()),abs(low_swings.min())
-  alpha_mu = average of the two?
+  alpha = 
   return alpha, beta
 
 #indication prep process
