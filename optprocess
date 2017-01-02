@@ -132,6 +132,64 @@ report.to_csv(reportpath,index=True,headers=report.columns)
 
 #generate combination codes
 #run through each code
+
+Analyzed Indicators:
+Floats:
+  Fully Parcelized 40-anchors:
+    14d CCI
+    20d CCI
+    14d %K
+    3d  %D
+    20/2 Bollinger Rank
+    20/2 Keltner Rank
+  Minimally Parcelized 20-anchors:
+    5d  SMA Norm
+    14d SMA Norm
+    20d SMA Norm
+    50d SMA Norm
+    100d SMA Norm
+    200d SMA Norm
+    5d  EMA Norm
+    14d EMA Norm
+    20d EMA Norm
+    50d EMA Norm
+    100d EMA Norm
+    200d EMA Norm
+
   
+  
+  
+
+  
+Boolean:
+  14d-5d CCI-Div
+  14d-8d CCI-Div
+  14d-13d CCI-Div
+  20d-5d CCI-Div
+  20d-8d CCI-Div
+  20d-13d CCI-Div
+  K-D Positive/Negative?
+  5/14 SMA Crossover
+  14/20 SMA Crossover
+  50/100 SMA Crossover
+  100/200 SMA Crossover
+  5/14 SMA Crossunder
+  14/20 SMA Crossunder
+  50/100 SMA Crossunder
+  100/200 SMA Crossunder
+  5/14 EMA Crossover
+  14/20 EMA Crossover
+  50/100 EMA Crossover
+  100/200 EMA Crossover
+  5/14 EMA Crossunder
+  14/20 EMA Crossunder
+  50/100 EMA Crossunder
+  100/200 EMA Crossunder
+  
+Possible:
+  Candlesticks:
+    Doji
+    Hammer/Hangman
+    
     
   
