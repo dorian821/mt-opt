@@ -22,15 +22,19 @@ def bottoming(series):
 
 
 def peaks(series):
-  slopes = pd.rolling_apply(arg=series,func=three_linest,window=3)
-  peak_count = count(pd.rolling_apply(arg=slopes,func=topping,window=2))  
+  lo_slopes = pd.rolling_apply(arg=series,func=three_linest,window=3)
+  trough_count = count(pd.rolling_apply(arg=slopes,func=topping,window=2))  
   return peak_count
 
-def troughs(series):
-  slopes = pd.rolling_apply(arg=series,func=three_linest,window=3)
-  swings = pd.rolling_apply(arg=slopes,func=bottoming,window=2)
-  trough_count = count(swings)  
-  return trough_count
+def peaks_troughs(hi_series,lo_series):
+  hi_slopes = pd.rolling_apply(arg=series,func=three_linest,window=3)
+  hi_swings = pd.rolling_apply(arg=slopes,func=topping,window=2)
+  hi_swing_
+  peak_count = count(hi_swings)  
+  lo_slopes = pd.rolling_apply(arg=series,func=three_linest,window=3)
+  lo_swings = pd.rolling_apply(arg=slopes,func=bottoming,window=2)
+  trough_count = count(lo_swings)
+  return peak_count,trough_count
 
 
 
