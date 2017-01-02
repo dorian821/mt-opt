@@ -1,6 +1,8 @@
 Basic Functionality:
   Strategy Reporting:
     MT Auto:
+      Master:
+        Accounting:
       Daily:
         TNP
         TnP Summary
@@ -19,11 +21,18 @@ Basic Functionality:
             Raw
     S&S:
       Master:
+        Accounting:
         Consolidated Report --> Filtering by Date,Symbol,Stx,etc..
           H-Link by date to price history        
         Analysis: 
           Filtering by feature 
           Correlation with tech-indics
+Info:
+  Definitions:
+    ...
+  Technical Indicators available
+  Time Periods
+  Symbols Available
           
           
           
