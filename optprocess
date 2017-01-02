@@ -67,6 +67,9 @@ for combo in indication_combos:
       
       for comval in value_combinations:
         for val in comval:
+          for x in np.arange(len(combo)):
+            if indic_data.columns.isin(combo[x]):
+              base_report_df.at[i,combo[x]] = val
           if val.dtype.str.contains('float'):
             sorted_df = sorted_df[sorted_df[indic] < val + indication_dict[indication][1]] & sorted_df[sorted_df[indic] > val - indication_dict[indication][1]]
           else:
@@ -94,6 +97,7 @@ for combo in indication_combos:
         base_report_df.at[i,'Alpha_Mu_(Volatility-#_of_Swings)'] = alph_mu_c
         base_report_df.at[i,'Beta_Mu_(Violence_of_Swings)'] = beta_mu_c
         i = i + 1
+report_indications = base_report[indic_data.columns]
 report_theta = (base_report[base_report['Theta_(Angle)'] >= base_report['Theta_(Angle)'].quantile(q=.95)])
 report_theta['Criteria'] = 'Theta'
 report_phi = (base_report[base_report['Phi_(Directionality)'] >= abs(base_report['Phi_(Directionality)']).quantile(q=.95)])
@@ -102,7 +106,7 @@ report_alpha_mu = (base_report[base_report['Alpha_Mu_(Volatility-#_of_Swings)'] 
 report_alpha_mu['Criteria'] = 'Alpha_Mu'
 report_beta_mu = (base_report[base_report['Beta_Mu_(Volatility-#_of_Swings)'] >= base_report['Beta_Mu_(Volatility-#_of_Swings)'].quantile(q=.95)])
 report_beta_mu['Criteria'] = 'Beta_Mu'
-report = pd.concat([indic_data,report_theta,report_phi,report_alpha_mu,report_beta_mu],axis=0)
+report = pd.concat([report_indications,report_theta,report_phi,report_alpha_mu,report_beta_mu],axis=0)
 report.to_csv(reportpath,index=True,headers=report.columns)
 
         
