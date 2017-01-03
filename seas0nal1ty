@@ -1,0 +1,9 @@
+#typ
+#normalize changes
+#power spectral distribution
+
+#generate periodogram on all periods in global of all sizes between min and max
+#output into array and extract all points which are:
+  more than 1.7 stdev away from mean
+scipy.signal.welch(x, fs=1.0, window='hanning', nperseg=256, noverlap=None, nfft=None, detrend='constant', return_onesided=True, scaling='density', axis=-1)
+scipy.signal.periodogram(x, fs=1.0, window=None, nfft=None, detrend='constant', return_onesided=True, scaling='density', axis=-1
