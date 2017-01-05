@@ -1,5 +1,9 @@
 
-		
+"EXIT STRATEGY 1"   MEANS EXIT AT CALCULATED PERCENTILE D7-D10 OR OTHER DEFINED EXIT TIME FRAME;  IF THE EXIT PERCENTILE/PERCENTAGE IS NOT ACHIEVED THEN EXIT AT CLOSE D10.
+"EXIT STRATEGY 2"  MEANS LOOK FOR EXIT POINT D7-10 OR OTHER DEFINED EXIT TIME FRAME WHERE THE LOSS IS NO MORE THAN 5%
+"EXIT STRATEGY 3" MEANS THAT IF THE CALC SELL IS NOT ACHIEVED DURING THE DEFINED WIN TIME, THEN THE POSITION IS CLOSED AT CLOSE ON D6 OR OTHER DEFINED WIN TIME.
+"EXIT STRATEGY 4" Means that if win is not reached by day 10, then position is held 'til day 20/expiration
+
 
 
 
@@ -39,8 +43,8 @@
 		tradepl = pd.Series(data=(np.where(wins == True,(acct * profit)-acct,
 									np.where(successfulexits == True,(acct * exitpc) - acct,
 									np.where(escape == 'EX3',((acct * data['per1cl_percent'])-acct),
-									np.where(((escape == 'EX2') & (successfulexits == False)),((acct * .95)-acct),
-									np.where(((escape == 'EX1') & (successfulexits == False)),((acct * data['per2cl_percent'])-acct),
+									np.where(((escape == 'EX2') & (successfulexits == False)),((acct * (data['per2cl_percent']-buypc)-acct),
+									np.where(((escape == 'EX1') & (successfulexits == False)),((acct * (data['per2cl_percent']-buypc)-acct),
 									np.where((escape == 'EX4'),((acct * data['per3cl_percent'])-acct),np.nan))))))),index=data.index,name=trpl)
 		ev = ''.join([strategyformula,'_Evaluation'])
 		eval = pd.Series(data=(np.where(((wins == False) | ((wins == True) & (tradepl == ((acct * profit)-acct)))),True,False)),index=data.index, name =''.join([strategyformula,'_Win_Calc_Evaluation'])) #Discuss this calc with Dad
