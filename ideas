@@ -262,29 +262,29 @@
 			sorts = list(os.listdir(''.join([sortdir,dir,'\\']))) #gives list of all files in each sort report summary folder
 			
 			for sor in sorts:
+				s = sor.split('_',3)
+				option = s[3]
+				srt = s[1]
 				sortsummary = pd.read_csv(''.join([sortdir,dir,'\\',sor]),'rb',delimiter=',',parse_dates=['Trade_Date'],infer_datetime_format=True).set_index(['Trade_Date'])
 				sortsummary.dropna(axis=0,subset=['d2op'],inplace=True)
+				rprtpath = ''.join([targetdir,symb,'_Sort_Report_',srt,'_',d.strftime('%Y-%m-%d'),'.csv'])
+				datapath = ''.join([targetdirdata,symb,'_Sort_Report_Data_',srt,'_',option,'_',d.strftime('%Y-%m-%d'),'.csv'])
 				data = sortsummary
-				datae = pd.DataFrame()
+				datae = pd.DataFrame()				
+				sort_report = pd.DataFrame()
 				frm = 0
 				for strategy in strategies:
 					frm =+ 1			
 					if strategy.split(',',3)[3] == 'MGMT2':
 						continue
-					else:
-						s = sor.split('_',3)
-						option = s[3]
-						srt = s[1]
-						
+					else:					
 						report, datah = reporter(data=data,strategy=strategy,option=option,account=account)
 						datae = pd.concat([datae,datah],axis=1)
-						rprtpath = ''.join([targetdir,symb,'_Sort_Report_',srt,'_',d.strftime('%Y-%m-%d'),'.csv'])
-						datapath = ''.join([targetdirdata,symb,'_Sort_Report_Data_',srt,'_',option,'_',d.strftime('%Y-%m-%d'),'.csv'])
+
 						report['Form_#'] = ''.join([str(frm),'_',option])
-						if os.path.isfile(rprtpath):
-							report.to_csv(rprtpath,mode='a',header=None)				
-						else: 
-							report.to_csv(rprtpath,mode='w',header=report.columns)
+						sort_report = pd.concat([sort_report,report],axis=0)
+						
+				sort_report.to_csv(rprtpath,mode='w',header=report.columns)
 				if 'Unnamed: 0' in data.columns:
 					data.drop(['Unnamed: 0'], axis=1,inplace=True)
 				data = pd.concat([data,datae],axis=1)		
