@@ -40,12 +40,12 @@
 			escape = pd.Series(data=(np.where((wins == False) & (entries == True) & (successfulexits == False),exstr, np.nan)),index=data.index,name=''.join([strategyformula,'_Escapes?']))
 		elif exstr == 'EX4':
 			escape = pd.Series(data=(np.where((wins == False) & (entries == True) & (successfulexits == False),exstr, np.nan)),index=data.index,name=''.join([strategyformula,'_Escapes?']))
-		tradepl = pd.Series(data=(np.where(wins == True,(acct * profit)-acct,
-									np.where(successfulexits == True,(acct * exitpc) - acct,
-									np.where(escape == 'EX3',((acct * data['per1cl_percent'])-acct),
-									np.where(((escape == 'EX2') & (successfulexits == False)),((acct * (data['per2cl_percent']-buypc)-acct),
+		tradepl = pd.Series(data=(np.where(wins == True,(acct * (sellpc-buypc)),
+									np.where(successfulexits == True,(acct * (exitpc-buypc)),
+									np.where(escape == 'EX3',(acct * (data['per1cl_percent']-buypc)),
+									np.where(((escape == 'EX2') & (successfulexits == False)),((acct * (data['per2cl_percent']-buypc)),
 									np.where(((escape == 'EX1') & (successfulexits == False)),((acct * (data['per2cl_percent']-buypc)-acct),
-									np.where((escape == 'EX4'),((acct * data['per3cl_percent'])-acct),np.nan))))))),index=data.index,name=trpl)
+									np.where((escape == 'EX4'),(acct * (data['per3cl_percent']-buypc)),np.nan))))))),index=data.index,name=trpl)
 		ev = ''.join([strategyformula,'_Evaluation'])
 		eval = pd.Series(data=(np.where(((wins == False) | ((wins == True) & (tradepl == ((acct * profit)-acct)))),True,False)),index=data.index, name =''.join([strategyformula,'_Win_Calc_Evaluation'])) #Discuss this calc with Dad
 
@@ -147,7 +147,8 @@
 		report['Fail%'] = 1-report['Win%']
 		report['CALC._PROF/LOSS_ON_Fd_TXS'] = exitpc-buypc
 		report['Highest_Hi'] = datah[cumprofit].max()
-		report['Max_Drawdown'] = datah[cumprofit].min()
+		report[´Biggest_Loser'] = datah[trpl].min()
+		report['Max_Drawdown(Acct_Min)'] = datah[cumprofit].min()
 		report['Max_%_Drawdown'] = datah[cumprofit].min()/acct
 		net = datah[datah[entries] == True]
 		report['Net_Profit/Loss'] = net.ix[-1][cumprofit]
@@ -169,7 +170,7 @@
 		
 	criteria = ('Form_#','Level','Strategy_Formula','#_of_Transactions','#_in_Dataset','D2_Investible_Volume','Calc_Profit%','Win%','Net_Profit/Loss',
 				'Highest_Hi','Ratio_Net/Highest_Hi','Hist_Profit/Loss_per_Tx','#_TX>0','%_of_TX>0', '#_OF_"FALSE"_IN_WIN_CALC',
-				'Fail%','CALC._PROF/LOSS_ON_Fd_TXS','#_of_Exit_Attempts','%_Successful_Exits','Max_Drawdown','Max_%_Drawdown','%_of_TXs_w/_LOSS>50%',
+				'Fail%','CALC._PROF/LOSS_ON_Fd_TXS','#_of_Exit_Attempts','%_Successful_Exits',´Biggest_Loser','Max_Drawdown(Acct_Min)','Max_%_Drawdown','%_of_TXs_w/_LOSS>50%',
 				'Catastrophic_Fail_%_(-80%)','AMT_AT_RISK','Buy_Target_%','Sell_Target_%','Win_Period_10th','Win_Period_20th','Win_Period_40th','Win_Period_50th','Win_Period_60th')	
 
 	strategies = ["20/10.GLB,7-10.GLB,EX1,MGMT1",
