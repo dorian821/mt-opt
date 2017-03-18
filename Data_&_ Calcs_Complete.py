@@ -509,7 +509,7 @@ def directionality(data,ndays):
 		low = pd.Series(data=data['Low'].shift(int(n)*-1).rolling(window=n).min(),index=data.index)
 		high = pd.Series(data=((high-data['Typical'])/data['Typical']),index=data.index)
 		low = pd.Series(data=((low-data['Typical'])/data['Typical']),index=data.index)	
-		dirat = pd.Series(data=np.where(high>abs(low),high/low,low/high),index=data.index,name=str(n)+'_Day_Directionality(%Up/%Down)')
+		dirat = pd.Series(data=high-low,index=data.index,name=str(n)+'_Day_Directionality(%Up/%Down)')
 		data = data.join(dirat)
 	return data
 
@@ -532,12 +532,18 @@ def volatility_stdev(data,ndays):
 		data = data.join(volatility)
 	return data
 	
-	
-	
-	
-	
-	
-	
+			
+def candlesticker(data):
+	base = data['Close'].shift(-1)
+	op = pd.Series(data=data['Open']/base,name='Candle_Open')
+	data = data.join(op)			 
+	hi = pd.Series(data=data['High']/base,name='Candle_High')
+	data = data.join(hi)				 
+	lo = pd.Series(data=data['Low']/base,name='Candle_Low')
+	data = data.join(lo)				 
+	cl = pd.Series(data=data['Close']/base,name='Candle_Close')
+	data = data.join(cl)	
+	return data
 	
 	
 	
