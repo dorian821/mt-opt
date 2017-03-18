@@ -226,13 +226,13 @@ def anchored_divergence_bool(data,col,r,diff,cutoff): #cutoff of 10%
 	anchor_values.fillna(method='ffill', inplace=True)
 	anchor_values.fillna(value=0,inplace=True)
 	data = data.join(anchor_values)
-	high_divergence = pd.Series(data=[(data['High']>data['High'].shift(1)) & (data[col]<=data[col+'_Anchor_Values'])],name=col+'High_Divergence')
+	high_divergence = pd.Series(data=[(data['High']>data['High'].shift(1)) & (data[col]<=data[col+'_Anchor_Values'])],name=col+'_High_Divergence')
 	data = data.join(high_divergence)
-	high_div_count = pd.Series(data=(np.where(data[col+'High_Divergence'] == True,data.index - data[col+'_Anchor_Indices'],np.nan),name=col+'High_Div_Count')
+	high_div_count = pd.Series(data=(np.where(data[col+'High_Divergence'] == True,data.index - data[col+'_Anchor_Indices'],np.nan),name=col+'_High_Div_Count')
 	data = data.join(high_div_count)			   
-	low_divergence = pd.Series(data=[(data['Low']<data['Low'].shift(1)) & (data[col]>=data[col+'_Anchor_Values'])],name=col+'Low_Divergence')
+	low_divergence = pd.Series(data=[(data['Low']<data['Low'].shift(1)) & (data[col]>=data[col+'_Anchor_Values'])],name=col+'_Low_Divergence')
 	data = data.join(low_divergence)
-	low_div_count = pd.Series(data=(np.where(data[col+'Low_Divergence'] == True,data.index - data[col+'_Anchor_Indices'],np.nan),name=col+'Low_Div_Count')
+	low_div_count = pd.Series(data=(np.where(data[col+'Low_Divergence'] == True,data.index - data[col+'_Anchor_Indices'],np.nan),name=col+'_Low_Div_Count')
 	data = data.join(low_div_count)			   
 	return data
 
@@ -500,7 +500,9 @@ def EVM(data, ndays):
 	EVM_MA = pd.Series(pd.rolling_mean(EVM, ndays), name = 'EVM') 
 	data = data.join(EVM_MA) 
 	return data 
-	
+
+####Need to add in normalized volume indicator
+				  
 #Measures	
 def directionality(data,ndays):
 	nrange = (np.arange(int(ndays/5))+1)*5
@@ -617,21 +619,51 @@ stk = CCI_DIVERG_F(stk,14)
 stk = CCI_DIVERG_T(stk,40)
 stk = CCI_DIVERG_F(stk,40)
 stk = CCI_DIVERG_S(stk,40)
-stk = anchored_divergence(data=stk,col='CCI_40',r=30,diff=40)
+stk = anchored_divergence_bool(data=stk,col='CCI_40',r=30,diff=40,cutoff=.2)
 stk = RSI(stk,20)
 stk = RSI(stk,40)
 stk = RSI(stk,89)
-stk = anchored_divergence(data=stk,col='RSI_40',r=30,diff=40)
+stk = anchored_divergence_bool(data=stk,col='RSI_40',r=30,diff=40,cutoff=.2)
 stk = SMAs(stk,'Typical')
 stk = EMAs(stk,'Typical')
 stk = MACD(data=stk,nday1=13,nday2=27,sign=8)
-stk = anchored_divergence(data=stk,col='MACD_13-27',r=20,diff=.1)
+stk = anchored_divergence_bool(data=stk,col='MACD_13-27',r=20,diff=.1,cutoff=.2)
 stk = SMA_slope(data=stk,sma='SMA_5',ndays=3)
 
 stk.to_csv('C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\MT-OPT\\SPY-DC.csv')
 
 stk = pd.read_csv('C:\\Users\\asus\\Dropbox\\Outlines\\MTAUTO-PYTHON\\MT-OPT\\SPY-DC.csv','rb',delimiter=',')
-	
+				       
+candle_columns	= ['Candle_Open','Candle_High','Candle_Low','Candle_Close']			       
+osc_columns = 	["%K",
+		"14_Min_Low",
+		"14_Max_Hi",
+		"%D",
+		"D1_DIR",#need to booleanize this
+		"D1_FAUXSTO",
+		"ABSOL_UP_D1_STO",
+		"%K_3PER_SLP",
+		"FIRST_UP_D1_%K_3PER_SLP",
+		"FIRST_DOWN_D1_%K_3PER_SLP",
+		"CCI_14",
+		"CCI_14_High_Divergence",
+		"CCI_14_High_Div_Count",
+		"CCI_40",
+		"CCI_89",
+		"RSI_20",
+		"RSI_20_High_Divergence",
+		"RSI_20_High_Div_Count",
+		"RSI_40",
+		"RSI_89",
+		"MACD_13-27",
+		"MACD_13-27_High_Divergence",
+		"MACD_13-27_High_Div_Count",
+		"Signal_EMA_8"]#Set this relative to MACD
+osc_bool_columns = 
+				       
+sma_columns				       
+ema_columns
+				       
 
 dccolumns =			["Open",
 					"High",
