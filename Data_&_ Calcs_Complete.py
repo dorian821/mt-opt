@@ -187,7 +187,48 @@ def anchored_divergence(data,col,r,diff):
 	divergence = pd.Series(data= np.where((divergence_slope> -.0019) & (divergence_slope< 0),True,False),index=data.index,name=col + '_Divergence_2ndDiv')
 	data = data.join(divergence)
 	return data
-	
+
+def anchored_divergence_bool(data,col,r,diff):
+	zzz = pd.Series()
+	data[col] = pd.Series(data[col].rolling(window=5).mean(),data.index,name=col)
+	anchors = pd.Series(index=data.index,name=col+'_Anchors')
+	flipped = pd.Series(data=np.abs(data[col])-diff,index=data.index,name='Flipped')
+	flipped.ix[:r+1] = np.nan
+	#data = data.join(flipped)
+	for i in (flipped.index[flipped<=0]):
+		z = flipped[i:i+dt.timedelta(days=r)].argmin()
+		zzz = zzz.append(pd.Series([z]))
+	zeros = pd.Series(zzz.unique(),name='Zeros')
+	#data = data.join(zeros)
+	#zeros.reset_index(drop=True,inplace=True)
+	for z in zeros.index:
+		if z == zeros.index[-1]:
+			break
+		zos = zeros[z:z+2] #.reset_index(drop=True) #,inplace=True)
+		if data.ix[zos[z]:zos[z+1]][col].max() > 100:
+			anchor = data.ix[zos[z]:zos[z+1]][col].idxmax()			
+		elif data.ix[zos[z]:zos[z+1]][col].min() < -100:
+			anchor = data.ix[zos[z]:zos[z+1]][col].idxmin()
+		else:
+			continue
+			#print ("Error: No max or min found")
+		anchors.at[anchor] = 1
+	anchors.fillna(value=np.nan, inplace=True)
+	data = data.join(anchors)
+	anchor_indices = pd.Series(data=np.where((data[col+'_Anchors'] == 1), data.index, data.index[0]),index=data.index,name=col+'_Anchor_Indices').astype(data.index.dtype)
+	anchor_indices[anchor_indices == data.index[0]] = np.nan
+	anchor_indices.fillna(method='ffill', inplace=True)
+	anchor_indices.fillna(value=0,inplace=True)
+	data = data.join(anchor_indices)
+	anchor_values = pd.Series(data=np.where((data[col+'_Anchors'] == 1), data[col], np.nan),index=data.index,name=col+'_Anchor_Values')
+	anchor_values.fillna(method='ffill', inplace=True)
+	anchor_values.fillna(value=0,inplace=True)
+	data = data.join(anchor_values)
+	high_divergence = pd.Series(data=[(data['high']>data['high'].shift(1)) & (data[col]<=data[col+'_Anchor_Values'])],name=col+'High_Divergence')
+	data = data.join(high_divergence)
+	low_divergence = pd.Series(data=[(data['high']>data['high'].shift(1)) & (data[col]<=data[col+'_Anchor_Values'])],name=col+'High_Divergence')
+	data = data.join(low_divergence)
+	return data
 
 #Slope
 def three_linest(y,x=np.arange(3),deg=1):
