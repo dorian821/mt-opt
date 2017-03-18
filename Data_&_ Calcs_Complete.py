@@ -188,7 +188,9 @@ def anchored_divergence(data,col,r,diff):
 	data = data.join(divergence)
 	return data
 
-def anchored_divergence_bool(data,col,r,diff):
+def anchored_divergence_bool(data,col,r,diff,cutoff): #cutoff of 10%
+	low_l = data[col].mean()-((data[col].max()-data[col].min())*cutoff)
+	high_l = data[col].mean()+((data[col].max()-data[col].min())*cutoff)
 	zzz = pd.Series()
 	data[col] = pd.Series(data[col].rolling(window=5).mean(),data.index,name=col)
 	anchors = pd.Series(index=data.index,name=col+'_Anchors')
@@ -205,9 +207,9 @@ def anchored_divergence_bool(data,col,r,diff):
 		if z == zeros.index[-1]:
 			break
 		zos = zeros[z:z+2] #.reset_index(drop=True) #,inplace=True)
-		if data.ix[zos[z]:zos[z+1]][col].max() > 100:
+		if data.ix[zos[z]:zos[z+1]][col].max() > high_l:
 			anchor = data.ix[zos[z]:zos[z+1]][col].idxmax()			
-		elif data.ix[zos[z]:zos[z+1]][col].min() < -100:
+		elif data.ix[zos[z]:zos[z+1]][col].min() < low_l:
 			anchor = data.ix[zos[z]:zos[z+1]][col].idxmin()
 		else:
 			continue
@@ -224,10 +226,14 @@ def anchored_divergence_bool(data,col,r,diff):
 	anchor_values.fillna(method='ffill', inplace=True)
 	anchor_values.fillna(value=0,inplace=True)
 	data = data.join(anchor_values)
-	high_divergence = pd.Series(data=[(data['high']>data['high'].shift(1)) & (data[col]<=data[col+'_Anchor_Values'])],name=col+'High_Divergence')
+	high_divergence = pd.Series(data=[(data['High']>data['High'].shift(1)) & (data[col]<=data[col+'_Anchor_Values'])],name=col+'High_Divergence')
 	data = data.join(high_divergence)
-	low_divergence = pd.Series(data=[(data['high']>data['high'].shift(1)) & (data[col]<=data[col+'_Anchor_Values'])],name=col+'High_Divergence')
+	high_div_count = pd.Series(data=(np.where(data[col+'High_Divergence'] == True,data.index - data[col+'_Anchor_Indices'],np.nan),name=col+'High_Div_Count')
+	data = data.join(high_div_count)			   
+	low_divergence = pd.Series(data=[(data['Low']<data['Low'].shift(1)) & (data[col]>=data[col+'_Anchor_Values'])],name=col+'Low_Divergence')
 	data = data.join(low_divergence)
+	low_div_count = pd.Series(data=(np.where(data[col+'Low_Divergence'] == True,data.index - data[col+'_Anchor_Indices'],np.nan),name=col+'Low_Div_Count')
+	data = data.join(low_div_count)			   
 	return data
 
 #Slope
