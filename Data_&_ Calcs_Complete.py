@@ -534,22 +534,40 @@ def volatility_stdev(data,ndays):
 	
 			
 def candlesticker(data):
+	new_data = pd.DataFrame()			 
 	base = data['Close'].shift(-1)
 	op = pd.Series(data=data['Open']/base,name='Candle_Open')
-	data = data.join(op)			 
+	new_data = new_data.join(op)			 
 	hi = pd.Series(data=data['High']/base,name='Candle_High')
-	data = data.join(hi)				 
+	new_data = new_data.join(hi)				 
 	lo = pd.Series(data=data['Low']/base,name='Candle_Low')
-	data = data.join(lo)				 
+	new_data = new_data.join(lo)				 
 	cl = pd.Series(data=data['Close']/base,name='Candle_Close')
-	data = data.join(cl)	
-	return data
+	new_data = new_data.join(cl)	
+	return new_data
 	
-	
-	
-	
-	
-	
+def normalizer_setwidth(data):
+	new_data = pd.DataFrame()			 
+	for col in data.columns:		 
+		mx = data[col].max()
+		mn = data[col].min()
+		mx = mx + ((mx-mn)/100)
+		mn = mn - ((mx-mn)/100)
+		normalized = pd.Series(data=((data[col]-mn)/(mx-mn),name=col+'_Norm')
+		new_data = new_data.join(normalized)
+	return new_data			       
+
+def normalizer_bool(data):
+	new_data = pd.DataFrame()			 
+	for col in data.columns:
+		normalized = pd.Series(data=np.where(data[col]==True,.99,.01),name=col+'_Norm')
+		new_data = new_data.join(normalized)		       
+	return new_data
+
+def normalizer_centered(data):
+	new_data = pd.DataFrame(data=data/2)
+	return new_data			       
+				       
 
 current_time = dt.datetime.now()
 last_friday = (current_time.date()
