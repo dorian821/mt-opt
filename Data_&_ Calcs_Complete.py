@@ -579,9 +579,9 @@ def blob_trimmer(array):
 		bins = [ mn + (bin_width * c) for c in bin_count] # mn + (bin_width * np.arange(2**p))
 		binplace = np.digitize(array, bins)		       
 		bin_pop = [len(array[binplace == i]) for i in range(1, len(bins))]
-		retained_bins = bins[bin_pop>=bin_pop.mean()]		       
-		trimmed_array = array[	       
-				       
+		retained_bins_max = bins[(bin_pop>=bin_pop.mean()) & (bins>(bins.max()/2))].max()	#bin_pop>=bin_pop.quantile(dropout)	       
+		trimmed_array = array[array<=retained_bins_max]	       
+		if trimmed_array.std() < 		       
 				       
 				       
 >>> binplace = np.digitize(avgs, bins) #Returns which bin an average belongs
