@@ -568,9 +568,26 @@ def normalizer_bool(data):
 
 def normalizer_centered(data):
 	new_data = pd.DataFrame(data=data/2)
-	return new_data			       
+	return new_data
 				       
-
+def blob_trimmer(array): 
+	powers = np.arange(6)+4
+	mn = array.min()		       
+	for p in powers:
+		bin_width = (array.max() - array.min())/(2**p)		       
+		bin_count = np.arange(2**p)
+		bins = [ mn + (bin_width * c) for c in bin_count] # mn + (bin_width * np.arange(2**p))
+		binplace = np.digitize(array, bins)		       
+		bin_pop = [len(array[binplace == i]) for i in range(1, len(bins))]
+		retained_bins = bins[bin_pop>=bin_pop.mean()]		       
+		trimmed_array = array[	       
+				       
+				       
+				       
+>>> binplace = np.digitize(avgs, bins) #Returns which bin an average belongs
+>>> binplace
+array([1, 6, 2, 3, 5, 4, 1, 4, 6, 6, 2, 3, 5, 6, 3, 1, 2, 3, 5, 7, 5, 3, 4])				       
+				       
 current_time = dt.datetime.now()
 last_friday = (current_time.date()
 	- dt.timedelta(days=current_time.weekday())
