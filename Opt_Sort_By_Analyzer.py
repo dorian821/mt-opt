@@ -127,6 +127,13 @@ def find_strike(array,value,movement):
 		stx = array
 	return stx
 
+def 20k_sortby(data,volume,days_to_expiration):
+	underlying = pd.Series(data=((data['underlying_bid_eod']+data['underlying_ask_eod'])/2),index=data.index)
+	stx = pd.Series(data=(data['strike'] -underlying),index=data.index)
+	d2x = pd.Series(data=(data['expiration']-data['quote_date']/np.timedelta64(1, 'D')).astype(int), index=data.index)
+	sorted_data = data[(data['trade_volume']>=volume)&(d2x<=days_to_expiration)&(np.abs(stx)<underlying*1.05)]
+	return sorted_data
+
 types = ('put','call')
 symbs = ('AAPL','')
 years = ('2016','2017')
@@ -161,17 +168,14 @@ for symb in symbs:
 				continue
 			#filter near the money options
 			data.drop_duplicates(['expiration', 'strike','quote_date'],inplace=True)
-			data['expiration'] = pd.to_datetime(data['expiration'], infer_datetime_format=True)
-			data['quote_date'] = pd.to_datetime(data['quote_date'], infer_datetime_format=True)
-			sort = data[(data[c] >= value) & (data['quote_date'] > new_year)]
-			prices = (sort['underlying_bid_eod']+sort['underlying_ask_eod'])/2
-			sort = sort[(sort['strike'] >= (prices*.98)) & (sort['strike'] <= (prices*1.02))]
-			quotes = sort['quote_date'].unique()
-			quotes = pd.to_datetime(quotes, infer_datetime_format=True)
-			for i in sort.index:
+			sorted_data = 20k_sortby(data=data,volume=value,days_to_expiration=5)
+
+			
+
+			for i in sorted_data.index:
 				opt = data[(data['expiration'] == sort.ix[i]['expiration'])&(data['strike'] == sort.ix[i]['strike'])].set_index('quote_date')
-				opt = opt[sort.ix[i]['quote_date']:]
-				if (len(opt) > 13):
+				opt = opt[sorted_data.ix[i]['quote_date']:]
+				if (len(opt) > 2):
 					if (opt.ix[1]['open'] != 0): 
 						rprt = mt_reporter(opt)
 						report = pd.concat([report,rprt],axis=0)								
