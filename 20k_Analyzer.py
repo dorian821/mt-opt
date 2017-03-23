@@ -131,8 +131,25 @@ def 20k_sortby(data,volume,days_to_expiration):
 	underlying = pd.Series(data=((data['underlying_bid_eod']+data['underlying_ask_eod'])/2),index=data.index)
 	stx = pd.Series(data=(data['strike'] -underlying),index=data.index)
 	d2x = pd.Series(data=(data['expiration']-data['quote_date']/np.timedelta64(1, 'D')).astype(int), index=data.index)
-	sorted_data = data[(data['trade_volume']>=volume)&(d2x<=days_to_expiration)&(np.abs(stx)<underlying*1.05)]
+	sorted_data = data[(data['trade_volume']>=volume)&(np.in1d(d2x,days_to_expiration))&(np.abs(stx)<underlying*1.05)]
 	return sorted_data
+
+def simple_reporter(data):
+	report = pd.DataFrame(index=np.arange(1))
+	report['Expiration'] = str(data.ix[0]['expiration'].date())
+	report['Day_1_Volume'] = data.ix[0]['trade_volume']
+	report['Days_to_Expiration'] = ((data.ix[0]['expiration'] - data.index[0])/ np.timedelta64(1, 'D')).astype(int)
+	report['Option_Symbol'] = ''.join([str(data.ix[0]['expiration'].date()),',',data.ix[0]['option_type'],',',str(data.ix[0]['strike']),',',symb])
+	report['Trade_Date'] = data.index[0]
+	d2op = data.ix[1]['open']
+	report['d2op'] = data.ix[1]['open']	
+	report['d2hi'] = data.ix[1]['high']
+	report['d2lo'] = data.ix[1]['low']
+	report['d2cl'] = data.ix[1]['close']
+	report['d2ivst'] = data.ix[1]['trade_volume']*d2op*10
+	report['Trade_Hi/d2op'] = data.ix[1:]['high'].max()/d2op
+	report['Trade_Lo/d2op'] = data.ix[1:]['high'].max()/d2op
+	return report
 
 types = ('put','call')
 symbs = ('AAPL','')
@@ -168,16 +185,17 @@ for symb in symbs:
 				continue
 			#filter near the money options
 			data.drop_duplicates(['expiration', 'strike','quote_date'],inplace=True)
-			sorted_data = 20k_sortby(data=data,volume=value,days_to_expiration=5)
-
-			
-
+			sorted_data = 20k_sortby(data=data,volume=value,days_to_expiration=[5,4])			
+			i = 0
 			for i in sorted_data.index:
 				opt = data[(data['expiration'] == sort.ix[i]['expiration'])&(data['strike'] == sort.ix[i]['strike'])].set_index('quote_date')
 				opt = opt[sorted_data.ix[i]['quote_date']:]
 				if (len(opt) > 2):
-					if (opt.ix[1]['open'] != 0): 
-						rprt = mt_reporter(opt)
+					if (opt.ix[1]['open'] != 0):
+						rprt = simple_reporter(opt)
+						i = i + 1
+						rprt['Trade_#'] = i
+						opt['Trade_#'] = i
 						report = pd.concat([report,rprt],axis=0)								
 						rawreport = pd.concat([rawreport,opt],axis=0)
 					else:
