@@ -151,6 +151,14 @@ def simple_reporter(data):
 	report['Trade_Lo/d2op'] = data.ix[1:]['high'].max()/d2op
 	return report
 
+def spike_finder(data,volume,days_to_expiration,col,q):
+	underlying = pd.Series(data=((data['underlying_bid_eod']+data['underlying_ask_eod'])/2),index=data.index)
+	stx = pd.Series(data=(data['strike'] -underlying),index=data.index)
+	d2x = pd.Series(data=(data['expiration']-data['quote_date']/np.timedelta64(1, 'D')).astype(int), index=data.index)
+	sorted_data = data[(data['trade_volume']>=volume)&(np.in1d(d2x,days_to_expiration))&(np.abs(stx)<underlying*1.05)]
+	spike_level = np.abs(sorted_data[col].quantile(q))
+	return spike_level
+	
 types = ('put','call')
 symbs = ('AAPL','')
 years = ('2016','2017')
@@ -212,52 +220,6 @@ for symb in symbs:
 				
 				
 				
-''''''''''
-exp1, exp2 = next_monthly(q)
-days = sort[(sort['expiration'] >=exp1) & (sort['expiration'] <=exp2)].reset_index()
-p = (days.ix[0]['underlying_bid_eod']+days.ix[0]['underlying_ask_eod'])/2
-stx = find_strike(days['strike'].unique(),p,x)
-for e in days['expiration'].unique():
-opt = data[(data['expiration'] == e)]
-opt = opt[(opt['strike'] == int(stx))].set_index('quote_date')
-opt = opt[q:]					
-if (len(opt) > 13):
-if (opt.ix[1]['open'] != 0): 
-rprt = mt_reporter(opt)
-report = pd.concat([report,rprt],axis=0)
-report['Expiration'] = e
-rawreport = pd.concat([rawreport,opt],axis=0)
-else:
-continue
-else:
-continue
-						
-report.to_csv(rprtsortbypath)
-rawreport.to_csv(rawsortbypath)					
 
-#filter by criteria
-#for unique quote date 			
-#for each expiration from 0 - 2 weeks out  
-#get 5 strikes surrounding ATM
-#report
-'''
-
-'''''''''''
-exps = sort['expiration'].unique()
-for exp in exps:
-strikes =  sort['strike'].unique()
-for strike in strikes:					
-srt = sort[(sort['expiration'] == exp) & (sort['strike'] == strike)]
-opt = data[(data['expiration'] == exp) & (data['strike'] == strike)].reset_index(drop=False)
-opt['Option_Symbol'] = ''.join([str(opt.ix[0]['expiration'].date()),',',opt.ix[0]['option_type'],',',str(opt.ix[0]['strike']),',',symb])
-opt.set_index('quote_date',inplace=True)
-start = np.min(srt['quote_date'])				
-opt = opt[start:]					
-if (len(opt) > 13):
-if (opt.ix[1]['open'] != 0): 
-rprt = mt_reporter(opt)
-report = pd.concat([report,rprt],axis=0)
-rawreport = pd.concat([rawreport,opt],axis=0)
-'''''''''''''''		
 
 					
