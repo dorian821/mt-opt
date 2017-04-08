@@ -230,3 +230,30 @@ def put_trade_analyzer(data,sellpc,buypc,exstr,exitpc,mmgmt,strategyformula,acct
 	else:
 		report['Level'] = 3
 	return report, datah 
+
+for symb in symbs:
+	dfs = os.listdir(direct.data_dir+symb+'\\')
+	price_matrices = direct.pm_dir
+	os.makedirs(price_matrices,exist_ok=True)
+	for type in types:
+		datae = [df for df in dfs if type in df]
+		data = pd.DataFrame()
+		for df in datae:		
+			dat = pd.read_csv(direct.data_dir+symb+'\\'+df,'rb',delimiter=',',parse_dates=['expiration','quote_date'],infer_datetime_format=True)
+			data = pd.concat([data,dat],axis=0)
+		underlying = pd.Series(data=np.round(((data['underlying_bid_eod']+data['underlying_ask_eod'])/2),decimals=0),index=data.index,name='underlying..')
+		stx = pd.Series(data=(data['strike'] - underlying),index=data.index,name='stx')
+		close = pd.Series(data=((data['bid_eod']+data['ask_eod'])/2),index=data.index,name='close..')
+		d2x = pd.Series(data=((data['expiration']-data['quote_date'])/np.timedelta64(1, 'D')).astype(int), index=data.index,name='d2x')
+		data = pd.concat([data,underlying,stx,d2x,close],axis=1)
+		price_matrix = pd.DataFrame()
+		for strike in np.arange(37)-18:
+			price_curve = pd.Series(index=np.arange(30)+1,name=str(strike))
+			for days in np.arange(31):
+				day_price = data['close..'][(d2x==days)&(stx==strike.astype('float64'))].mean()
+				price_curve.set_value(days,day_price)
+			price_matrix = pd.concat([price_matrix,price_curve],axis=1)
+		x = price_matrix.fillna(method='backfill',axis=0)
+		y = price_matrix.fillna(method='ffill',axis=0)
+		price_matrix = (x+y)/2
+		price_matrix.to_csv(direct.pm_dir+symb+'_'+type+'_price_matrix.csv',mode='w',index=True)
