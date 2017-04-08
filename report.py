@@ -2,40 +2,52 @@ def date_diff(dates1,dates2):
 	diffs = ((dates2-dates1)/np.timedelta64(1, 'D')).astype(int)
 	return diffs
 
-def single_option_price_estimator(stk,d2,d2x,pmx):
+def closest(value, myList):
+	myList = map(int,myList)
+	idx = min(myList, key=lambda x:abs(x-value))
+	return idx
+
+class option_pricer:
 	types = ('Puts','Calls')
-	if symb == '^VIX':
-		symb = 'VXX'
-	stk = stk[d2:d2+dt.timedelta(days=35)]
-	closes = pd.Series(data=np.round(stk['Close'] - stk.ix[d2]['Close'],decimals=0),index=stk.index).reset_index(drop=True)
-	diffs = pd.Series(data=(((stk.index[j]-stk.index[0])/np.timedelta64(1, 'D')).astype(int) for j in (6,10,15,20)),index=(6,10,15,20))
-	prices = {}	
-	for typ in types:
-		price_ratios = pd.Series(index=diffs.index)
+	def __init__(self,symb):
+		self.symb = symb
+		self.stk = web.data_reader(self.symb,'yahoo',
+					   
+	def single_option_price_estimator(self,d2,d2x,typ):	
+		stk = self.stk[d2:d2+dt.timedelta(days=35)]
+		closes = pd.Series(data=np.round((((stk['Close'] - stk.ix[d2]['Close'])/stk.ix[d2]['Close'])-1)*100,decimals=1),index=stk.index).reset_index(drop=True)
+		diffs = pd.Series(data=(((stk.index[j]-stk.index[0])/np.timedelta64(1, 'D')).astype(int) for j in (6,10,15,20)),index=(6,10,15,20))
+		price_ratios = {}
 		if typ == 'Calls':
-			t = -1
-		elif typ == 'Puts':
 			t = 1
+		elif typ == 'Puts':
+			t = -1
 		for i in diffs.index:
-			d2_price = pmx[symb+'_'+typ].ix[d2x][str(t)]
-			price_ratios[i] = pmx[symb+'_'+typ].ix[i][str(int(t-closes[i]))]/d2_price
-		#price_ratios = pd.Series(data=sig.savgol_filter(price_ratios, 5, 3),index=np.arange(len(data))+2)
-		prices[typ] = price_ratios.transpose()
-		
-	return prices['Puts'],prices['Calls']
+			d2_price = self.pmx[symb+'_'+typ].ix[d2x][str(closest(tpmx.columns))]
+			price_ratios[i] = self.pmx[symb+'_'+typ].ix[i][str(int(closest(t-closes[i],pmx.columns)))]/d2_price
+			#price_ratios = pd.Series(data=sig.savgol_filter(price_ratios, 5, 3),index=np.arange(len(data))+2)	
+		return price_ratios
 	
-def option_price_estimator(data,stk,pmx):
-	exps = pd.Series(data=(map(next_monthly,data.index)),index=data.index)
-	d2s = pd.Series(data=[stk.index[i+1] for i in np.arange(len(stk)-1)],index=stk.index[:-1])
-	d2s = d2s[d2s.index.isin(data.index)]
-	d2xs = pd.Series(data=date_diff(d2s,exps),index=data.index)
-	for d in data.index:		
-		put_p, call_p = single_option_price_estimator(stk,d2,d2x,pmx)
-		puts.ix[d] = put_p
-		calls.ix[d] = call_p
-	return puts, calls
+	def option_price_estimator(self,data):
+		exps = pd.Series(data=(map(next_monthly,data.index)),index=data.index)
+		d2s = pd.Series(data=[self.stk.index[i+1] for i in np.arange(len(self.stk)-1)],index=self.stk.index[:-1],name='d2s')
+		d2s = d2s[d2s.index.isin(data.index)]
+		d2xs = pd.Series(data=date_diff(d2s,exps),index=data.index,name='d2xs')
+		dedo = pd.concat([d2s,d2xs],axis=1)
+		prices = {}
+		for typ in self.types:
+			prices[typ] = map(single_option_price_estimator,zip(d2s,d2xs,typ))
+		calls = pd.DataFrame(prices['Calls'],index=data.index)
+		puts = pd.DataFrame(prices['Puts'],index=data.index)
+		return calls, puts
+
+		for d in data.index:		
+			put_p, call_p = single_option_price_estimator(dedo)
+			puts.ix[d] = put_p
+			calls.ix[d] = call_p
+		return puts, calls
 	
-def call_trade_analyzer(data,sellpc,buypc,exstr,exitpc,mmgmt,strategyformula,acct,prices):
+def call_trade_analyzer(data,sellpc,buypc,exstr,exitpc,mmgmt,strategyformula,acct,calls):
 	trpl = ''.join([strategyformula,'_Trade_Profit/Loss'])
 	profit = 1 + (sellpc-buypc)
 	entries = pd.Series(data=(data['D2Lo/D2Op'] <= buypc),index=data.index,name=''.join([strategyformula,'_Got_In?']))
@@ -72,7 +84,7 @@ def call_trade_analyzer(data,sellpc,buypc,exstr,exitpc,mmgmt,strategyformula,acc
 	datah = pd.concat([entries,wins,successfulexits,escape,tradepl,eval],axis=1)
 	return datah
 
-def put_trade_analyzer(data,sellpc,buypc,exstr,exitpc,mmgmt,strategyformula,acct,prices):
+def put_trade_analyzer(data,sellpc,buypc,exstr,exitpc,mmgmt,strategyformula,acct,puts):
 	trpl = ''.join([strategyformula,'_Trade_Profit/Loss'])
 	profit = 1 + (buypc-sellpc)
 	entries = pd.Series(data=(data['D2Hi/D2Op'] >= buypc),index=data.index,name=''.join([strategyformula,'_Got_In?']))
@@ -107,14 +119,12 @@ def put_trade_analyzer(data,sellpc,buypc,exstr,exitpc,mmgmt,strategyformula,acct
 	datah = pd.concat([entries,wins,successfulexits,escape,tradepl,eval],axis=1)
 	return datah
   
-  def reporter(data,strategy,account,option,price_estimates,criteria):
+def reporter(data,strategy,account,option,prices,criteria):
 	buyperc,sellperc,sellset,exitperiod,exitset,exstr,mmgmt = decoder(strategy)
-	if option == 'call':
-		prices = price_estimates['Calls']
+	if option == 'call':		
 		heads = ['D2Lo/D2Op','Trade_Hi','Per1Hi/D2Op','Per2Hi/D2Op','Per1-2Hi/D2Op','Per3-4Hi/D2Op']
 		quants = [.1,.2,.4,.5,.6]
-	elif option == 'put':
-		prices = price_estimates['Puts']
+	elif option == 'put':		
 		heads = ['D2Hi/D2Op','Trade_Lo','Per1Lo/D2Op','Per2Lo/D2Op','Per1-2Lo/D2Op','Per3-4Lo/D2Op']
 		buyperc = 100-buyperc
 		sellperc = 100-sellperc
@@ -235,22 +245,30 @@ for symb in symbs:
 	dfs = os.listdir(direct.data_dir+symb+'\\')
 	price_matrices = direct.pm_dir
 	os.makedirs(price_matrices,exist_ok=True)
-	for type in types:
-		datae = [df for df in dfs if type in df]
+	
+	for typ in types:
+		datae = [df for df in dfs if typ in df]
 		data = pd.DataFrame()
 		for df in datae:		
 			dat = pd.read_csv(direct.data_dir+symb+'\\'+df,'rb',delimiter=',',parse_dates=['expiration','quote_date'],infer_datetime_format=True)
 			data = pd.concat([data,dat],axis=0)
-		underlying = pd.Series(data=np.round(((data['underlying_bid_eod']+data['underlying_ask_eod'])/2),decimals=0),index=data.index,name='underlying..')
-		stx = pd.Series(data=(data['strike'] - underlying),index=data.index,name='stx')
+		underlying = pd.Series(data=((data['underlying_bid_eod']+data['underlying_ask_eod'])/2),index=data.index,name='underlying..')
+		stx = pd.Series(data=np.round(((data['strike'] - underlying)/underlying)-1)*100,decimals=1),index=data.index,name='stx')
 		close = pd.Series(data=((data['bid_eod']+data['ask_eod'])/2),index=data.index,name='close..')
 		d2x = pd.Series(data=((data['expiration']-data['quote_date'])/np.timedelta64(1, 'D')).astype(int), index=data.index,name='d2x')
-		data = pd.concat([data,underlying,stx,d2x,close],axis=1)
+		pm_data = pd.concat([stx,d2x,close],axis=1)
+		pm_data = pm_data[pm_data['d2x']<=40]
+		grouped = pm_data.groupby(['stx','d2x'])['close..'].mean()
+		price_matrix = grouped.pivot_table(values='close..',index=['d2x'],columns=['stx']
+		price_matrix.to_csv(direct.pm_dir+symb+'_'+typ+'_price_matrix.csv',mode='w',index=True)				   
+		return price_matrix
+						   
+						   
 		price_matrix = pd.DataFrame()
 		for strike in np.arange(37)-18:
 			price_curve = pd.Series(index=np.arange(30)+1,name=str(strike))
 			for days in np.arange(31):
-				day_price = data['close..'][(d2x==days)&(stx==strike.astype('float64'))].mean()
+				day_price = pm_data['close..'][(d2x==days)&(stx==strike.astype('float64'))].mean()
 				price_curve.set_value(days,day_price)
 			price_matrix = pd.concat([price_matrix,price_curve],axis=1)
 		x = price_matrix.fillna(method='backfill',axis=0)
