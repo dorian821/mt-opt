@@ -13,8 +13,8 @@ logs = os.listdir(log_dir)
 awol_report = pd.DataFrame(index=np.arange(3000))
 for name in logs:
   df = pd.read_csv(log_dir+name,'rb',sep=',',names={'Files'})
-  dats = pd.Series([pd.to_datetime(x.split('_',5)[5],infer_datetime_format=True) for x in df['Files']])
-  ds = dets[dats.min():dats.max()]
+  dats = [pd.to_datetime(x.split('_',5)[5],infer_datetime_format=True) for x in df['Files']]
+  ds = dets[np.min(dats):np.max(dats)]
   awol = pd.Series(list(set(dets.index) - set(ds)),index=np.arange(3000),name=name)
   awol_report = pd.concat([awol_report,awol],axis=1)
  
