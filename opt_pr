@@ -1,14 +1,26 @@
+
 idx_dict = {stk.index[i]:i for i in np.arange(len(stk))}
+for sat in sats:
+  idx_dict[sat] = idx_dict[sat-dt.timedelta(days=1)]
+  
+  
+  
 for d in series1.unique():
   series1[series1 == d] = i
 for d in series2.unique():
   series2[series2 == d] = i
-diffs = pd.Series(data=series1-series2,index=series1.index,name=diffs)
+diffs = pd.Series(data=series1-series2,index=series1.index,name='diffs')
 
 
 
-
-
+def all_sats(year1,year2):
+   d = date(year1, 1, 1)                    # January 1st
+   d += timedelta(days = 6 - d.weekday())
+   sats = []
+   while d.year <= year2:
+      sats.extend(d)
+      d += timedelta(days = 7)
+   return sats
 
 
 
