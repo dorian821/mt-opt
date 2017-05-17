@@ -1,0 +1,15 @@
+idx_dict = {stk.index[i]:i for i in np.arange(len(stk))}
+for d in series1.unique():
+  series1[series1 == d] = i
+for d in series2.unique():
+  series2[series2 == d] = i
+diffs = pd.Series(data=series1-series2,index=series1.index,name=diffs)
+
+
+
+
+
+
+
+
+
