@@ -1658,6 +1658,8 @@ class price_matrix:
 		d2 = d1 - v*math.sqrt(t)
 		optprice = cp*s*math.exp(-div*t)*stats.norm.cdf(cp*d1) - \
 			cp*k*math.exp(-rf*t)*stats.norm.cdf(cp*d2)
+		if optprice == np.nan:
+			print('v=',v,' sqrt(t)=', math.sqrt(t))
 		return optprice
 		
 	def pms(self,symb):				
@@ -2349,6 +2351,7 @@ class lcr:
 	def __init__(self,d,direct):
 		self.d = d
 		self.direct = direct
+		
 	def _lcreporter(self,d):
 		lcr_dir = self.direct.lcr_dir
 		sort_dir = self.direct.sort_dir
@@ -2362,44 +2365,57 @@ class lcr:
 			sorts = os.listdir(sortsdir)
 			lcr_report = pd.DataFrame(columns=lcrcolumns)
 			del lcr_report['Buy/Sell']
-			for sort in sorts:
-				if any(cluster in sort for cluster in cluster_list):
-					source = 'Cluster'
-				elif '20k' in sort:
-					source = '20k'
-				elif 'sort' in sort:
-					source = 'MT-Auto'
-				lcreport = pd.read_csv(''.join([sortsdir,sort]),'rb',delimiter=',')
-				if 'Unnamed: 0' in lcreport.columns:
-					del lcreport['Unnamed: 0']				
-				if len(lcreport) > 0:
-					#lcreport['Level'] = pd.Series(data=np.where(((lcreport['#_of_Transactions'] > 15) & (lcreport['Ratio_Net/Highest_Hi'] >= .9499) & 
-															#(lcreport['Hist_Profit/Loss_per_Tx'] >= (acct * .199)) & (lcreport['#_OF_"FALSE"_IN_WIN_CALC'] < 2) &  
-															#(lcreport['%_of_TXs_w/_LOSS>50%'] < .06) & (lcreport['Win%'] >= .9) & (lcreport['Catastrophic_Fail_%_(-80%)'] == 0)),1,
-															#np.where(((lcreport['#_of_Transactions'] > 15) & (lcreport['Ratio_Net/Highest_Hi'] >= .9499) & 
-															#(lcreport['Hist_Profit/Loss_per_Tx'] >= (acct * .099)) & (lcreport['#_OF_"FALSE"_IN_WIN_CALC'] < 2) &  
-															#(lcreport['%_of_TXs_w/_LOSS>50%'] < .06) & (lcreport['Win%'] >= .8) & (lcreport['Catastrophic_Fail_%_(-80%)'] == 0)),2,0)),index=lcreport.index,name='Level')
-					lcreport['Strategy'] = source
-					level0 = lcreport[lcreport['Level']==0]
-					level1 = lcreport[lcreport['Level']==1]
-					level2 = lcreport[lcreport['Level']==2]				
-					lcreport = pd.concat([level0,level1,level2],axis=0)
-					s = sort.split('_',5)
-					lcreport['Stock_Symbol'] = s[0]
-					lcreport['Sort'] = s[3]
-					lcreport['Option'] = s[4]
-					
-					lcr_report = pd.concat([lcr_report,lcreport],axis=0)
-				else:
-					continue
-
-			lcr_report = buy_sell(lcr_report)
-			lcr = pd.concat([lcr,lcr_report],axis=0)
+			lcr = lcr_report(sorts,sortsdir,targetdir,to_print=0)
 		lcr = lcr[['Stock_Symbol','Option','Sort','Form_#','Level','Strategy','Strategy_Formula','Buy/Sell','D2Op/D1Cl','#_of_Transactions','#_in_Dataset','D2_Investible_Volume','Calc_Profit%','Win%','Net_Profit/Loss',
-					'Highest_Hi','Ratio_Net/Highest_Hi','Hist_Profit/Loss_per_Tx','#_TX>0','%_of_TX>0', '#_OF_"FALSE"_IN_WIN_CALC',
-					'Fail%','CALC._PROF/LOSS_ON_Fd_TXS','#_of_Exit_Attempts','%_Successful_Exits','Biggest_Loser','Max_Drawdown(Acct_Min)','Max_%_Drawdown','%_of_TXs_w/_LOSS>50%',
-					'Catastrophic_Fail_%_(-80%)','AMT_AT_RISK','Buy_Target_%','Sell_Target_%','Win_Period_10th/90th','Win_Period_20th/80th','Win_Period_40th/60th','Win_Period_50th/50th','Win_Period_60th/40th']]
+			'Highest_Hi','Ratio_Net/Highest_Hi','Hist_Profit/Loss_per_Tx','#_TX>0','%_of_TX>0', '#_OF_"FALSE"_IN_WIN_CALC',
+			'Fail%','CALC._PROF/LOSS_ON_Fd_TXS','#_of_Exit_Attempts','%_Successful_Exits','Biggest_Loser','Max_Drawdown(Acct_Min)','Max_%_Drawdown','%_of_TXs_w/_LOSS>50%',
+			'Catastrophic_Fail_%_(-80%)','AMT_AT_RISK','Buy_Target_%','Sell_Target_%','Win_Period_10th/90th','Win_Period_20th/80th','Win_Period_40th/60th','Win_Period_50th/50th','Win_Period_60th/40th']]
 		lcr.to_csv(path,mode='w',header=lcr.columns)
+		return self
+			
+	def lcr_report(self,sorts,sortsdir,targetdir,to_print):			
+		for sort in sorts:
+			if any(cluster in sort for cluster in cluster_list):
+				source = 'Cluster'
+			elif '20k' in sort:
+				source = '20k'
+			elif 'sort' in sort:
+				source = 'MT-Auto'
+			elif 'dtree' in sort:
+				source = 'D_Tree'
+			lcreport = pd.read_csv(''.join([sortsdir,sort]),'rb',delimiter=',')
+			if 'Unnamed: 0' in lcreport.columns:
+				del lcreport['Unnamed: 0']				
+			if len(lcreport) > 0:
+				#lcreport['Level'] = pd.Series(data=np.where(((lcreport['#_of_Transactions'] > 15) & (lcreport['Ratio_Net/Highest_Hi'] >= .9499) & 
+														#(lcreport['Hist_Profit/Loss_per_Tx'] >= (acct * .199)) & (lcreport['#_OF_"FALSE"_IN_WIN_CALC'] < 2) &  
+														#(lcreport['%_of_TXs_w/_LOSS>50%'] < .06) & (lcreport['Win%'] >= .9) & (lcreport['Catastrophic_Fail_%_(-80%)'] == 0)),1,
+														#np.where(((lcreport['#_of_Transactions'] > 15) & (lcreport['Ratio_Net/Highest_Hi'] >= .9499) & 
+														#(lcreport['Hist_Profit/Loss_per_Tx'] >= (acct * .099)) & (lcreport['#_OF_"FALSE"_IN_WIN_CALC'] < 2) &  
+														#(lcreport['%_of_TXs_w/_LOSS>50%'] < .06) & (lcreport['Win%'] >= .8) & (lcreport['Catastrophic_Fail_%_(-80%)'] == 0)),2,0)),index=lcreport.index,name='Level')
+				lcreport['Strategy'] = source
+				level0 = lcreport[lcreport['Level']==0]
+				level1 = lcreport[lcreport['Level']==1]
+				level2 = lcreport[lcreport['Level']==2]				
+				lcreport = pd.concat([level0,level1,level2],axis=0)
+				s = sort.split('_',5)
+				lcreport['Stock_Symbol'] = s[0]
+				lcreport['Sort'] = s[3]
+				lcreport['Option'] = s[4]
+
+				lcr_report = pd.concat([lcr_report,lcreport],axis=0)
+			else:
+				continue
+
+		lcr_report = buy_sell(lcr_report)
+		lcr = pd.concat([lcr,lcr_report],axis=0)
+		if to_print == 1:
+			path = ''.join([targetdir,'Level_Class_Report_',d.strftime('%Y-%m-%d'),'.csv'])
+			lcr = lcr[['Stock_Symbol','Option','Sort','Form_#','Level','Strategy','Strategy_Formula','Buy/Sell','D2Op/D1Cl','#_of_Transactions','#_in_Dataset','D2_Investible_Volume','Calc_Profit%','Win%','Net_Profit/Loss',
+						'Highest_Hi','Ratio_Net/Highest_Hi','Hist_Profit/Loss_per_Tx','#_TX>0','%_of_TX>0', '#_OF_"FALSE"_IN_WIN_CALC',
+						'Fail%','CALC._PROF/LOSS_ON_Fd_TXS','#_of_Exit_Attempts','%_Successful_Exits','Biggest_Loser','Max_Drawdown(Acct_Min)','Max_%_Drawdown','%_of_TXs_w/_LOSS>50%',
+						'Catastrophic_Fail_%_(-80%)','AMT_AT_RISK','Buy_Target_%','Sell_Target_%','Win_Period_10th/90th','Win_Period_20th/80th','Win_Period_40th/60th','Win_Period_50th/50th','Win_Period_60th/40th']]
+			lcr.to_csv(path,mode='w',header=lcr.columns)
 		return lcr
 		
 
