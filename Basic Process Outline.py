@@ -1269,15 +1269,18 @@ def reporter(data,strategy,account,option,prices,criteria,price_base):
 			
 	report = pd.DataFrame(index=np.arange(1),columns=criteria)
 	report['D2Op/D1Cl'] = data['D2Op/D1Cl'].mean()
-	strategyformula = strategy
-	report['Strategy_Formula'] = strategyformula
+	
+	report['Strategy_Formula'] = strategy
 	report['#_in_Dataset'] = len(data)
+	
+	#Buy Price
 	if price_base == 0:
 		buypc = data[heads[0]].quantile(q=buyperc/100)
 	if price_base == 1:
-		buypc = something.quantile(q=buyperc/100)
+		buypc = prices[1].quantile(q=buyperc/100)
 	acct = account * .5
 	
+	#SemiSet
 	if option == 'call':
 		semiset = data[data[heads[0]] <= buypc]
 		if price_base == 1:
@@ -1288,6 +1291,7 @@ def reporter(data,strategy,account,option,prices,criteria,price_base):
 			buypc = ((1-buypc)*10)+1
 	report['Buy_Target_%'] = buypc
 	
+	#Quantiles
 	if exstr == 'EX4':
 		if price_base == 0:
 			if option == 'call': 
@@ -1375,7 +1379,7 @@ def reporter(data,strategy,account,option,prices,criteria,price_base):
 	entries = ''.join([strategyformula,'_Got_In?'])
 	successfulexits = ''.join([strategyformula,'_Successful_Exits'])
 	
-	
+	#Analyze
 	if option == 'call':
 		report['Calc_Profit%'] = (sellpc-buypc)*10
 		pft = 1 + ((sellpc-buypc)*10)
@@ -1780,26 +1784,27 @@ class option_pricer:
 				price_data.ix[i] = single_bs_price_calc(stk=stk,d=i,d2=d2s.ix[i],exp=exps.ix[i],typ=typ)
 			prices[typ] = price_data   #map(option_pricer.single_option_price_estimator,d2s,d2xs,typ)
 		calls = pd.DataFrame(prices['Calls'],index=data.index)
-		puts = pd.DataFrame(prices['Puts'],index=data.index)
+		puts = pd.DataFrame(prices['Puts'],index=data.index)		
 		return calls, puts
 		
 	def single_bs_price_calc(stk,d,d2,exp,typ): #Need to determine why it's producing NAN
 		st = stk[stk.index[stk.index.get_loc(str(d2))-252]:d2]
 		v = (np.std(st['Close'])/np.mean(st['Close']))*2	 
 		if typ == 'Calls':
-			
+			buy = stk.loc[d2]['Low']
 			data = stk.ix[d2:stk.index[stk.index.get_loc(d2)+18]]['High']
 			cp = 1
 			strike = np.round(stk.loc[d2]['Open']*1.02,decimals=0)
 		elif typ == 'Puts':
-			
+			buy = stk.loc[d2]['High']
 			data = stk.ix[d2:stk.index[stk.index.get_loc(d2)+18]]['Low']
 			cp = -1	
 			strike = np.round(stk.loc[d2]['Open']*.98,decimals=0)
 		rf = .03
 		div = 0 
-		prices = pd.Series(index=np.arange(19)+2,name=d)
-		d2op = black_scholes(stk.loc[d2]['Open'],strike,(exp-d2).days/365,v,rf,div,cp)
+		prices = pd.Series(index=np.arange(20)+1,name=d)
+		d2op = black_scholes(buy,strike,(exp-d2).days/365,v,rf,div,cp)
+		prices.iloc[1] = (black_scholes(s,strike,t,v,rf,div,cp))/d2op
 		for i in data.index:
 			s = data[i]
 			t = (exp-i).days/365
@@ -1821,7 +1826,8 @@ class stock:
 	def __init__(self, symb,direct):
 		self.symb = symb
 		self.direct = direct
-	def load_opt_data(self,*years):
+		
+	def load_opt_data(self, years):
 		types = ['Calls','Puts']
 		opt_data = pd.DataFrame()
 		for typ in types:
