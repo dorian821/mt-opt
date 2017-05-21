@@ -1838,7 +1838,7 @@ class stock:
 		return opt_data
 		
 
-		
+	@staticmethod	
 	def load_pmx(symb):
 		pm_root = root + 'marketrader Team Folder\\Data\\'
 		types = ('Puts','Calls')				
@@ -1908,6 +1908,7 @@ class stock:
 		stk = MACD(data=stk,nday1=13,nday2=27,sign=8)
 		stk = anchored_divergence_bool(data=stk,col='MACD_13-27',r=20,diff=.1,cutoff=.2,offset=0)
 		stk = SMA_slope(data=stk,sma='SMA_5',ndays=3)
+		stk = direx(stk,[5,10,20,50,100])
 		stk.to_csv(self.direct.dc_dir + self.symb + '_Data_&_Calcs.csv',mode='w')
 		return stk	
 			
@@ -2147,6 +2148,159 @@ class stock:
 					stk_norm = stk_data[stk_data.index.isin(cluster.index)]
 					stk_norm = stk_norm.join(pd.Series(data=cluster, index=stk_norm.index,name='Diffs'))
 		return stk_norm
+	
+	@classmethod
+	def _get_mstd(cls, data, column, windows):
+		""" get moving standard deviation
+		:param df: data
+		:param column: column to calculate
+		:param windows: collection of window of moving standard deviation
+		:return: None
+		"""
+		window = cls.get_only_one_positive_int(windows)
+		column_name = '{}_{}_m_std'.format(column, window)
+		data[column_name] = data[column].rolling(min_periods=1, window=window,
+						     center=False).std()
+		return data
+
+	@classmethod
+	def _get_mvar(cls, data, column, windows):
+		""" get moving variance
+		:param df: data
+		:param column: column to calculate
+		:param windows: collection of window of moving variance
+		:return: None
+		"""
+		window = cls.get_only_one_positive_int(windows)
+		column_name = '{}_{}_m_var'.format(column, window)
+		data[column_name] = data[column].rolling(
+			min_periods=1, window=window, center=False).var()
+		return data
+	
+	@classmethod
+	def _get_mdm(cls, data, windows):
+		""" -DM, negative directional moving accumulation
+		If window is not 1, return the SMA of -DM.
+		:param df: data
+		:param windows: range
+		:return:
+		"""
+		window = cls.get_only_one_positive_int(windows)
+		column_name = 'mdm_{}'.format(window)
+		um, dm = data['um'], data['dm']
+		data['mdm'] = np.where(dm > um, dm, 0)
+		if window > 1:
+		mdm = data['mdm_{}_ema'.format(window)]
+		else:
+		mdm = data['mdm']
+		data[column_name] = mdm
+		return data
+
+	@classmethod
+	def _get_pdi(cls, data, windows):
+		""" +DI, positive directional moving index
+		:param df: data
+		:param windows: range
+		:return:
+		"""
+		window = cls.get_only_one_positive_int(windows)
+		pdm_column = 'pdm_{}'.format(window)
+		tr_column = 'atr_{}'.format(window)
+		pdi_column = 'pdi_{}'.format(window)
+		data[pdi_column] = data[pdm_column] / data[tr_column] * 100
+		return data[pdi_column]
+
+	@classmethod
+	def _get_mdi(cls, data, windows):
+		window = cls.get_only_one_positive_int(windows)
+		mdm_column = 'mdm_{}'.format(window)
+		tr_column = 'atr_{}'.format(window)
+		mdi_column = 'mdi_{}'.format(window)
+		data[mdi_column] = data[mdm_column] / data[tr_column] * 100
+		return data[mdi_column]
+
+	@classmethod
+	def _get_dx(cls, df, windows):
+		window = cls.get_only_one_positive_int(windows)
+		dx_column = 'dx_{}'.format(window)
+		mdi_column = 'mdi_{}'.format(window)
+		pdi_column = 'pdi_{}'.format(window)
+		mdi, pdi = data[mdi_column], data[pdi_column]
+		data[dx_column] = abs(pdi - mdi) / (pdi + mdi) * 100
+		return data[dx_column]
+	
+	@classmethod
+	def _get_tr(cls, data):
+		""" True Range of the trading
+		tr = max[(high - low), abs(high - close_prev), abs(low - close_prev)]
+		:param df: data
+		:return: None
+		"""
+		prev_close = data['close_-1_s']
+		high = data['high']
+		low = data['low']
+		c1 = high - low
+		c2 = np.abs(high - prev_close)
+		c3 = np.abs(low - prev_close)
+		data['tr'] = np.max((c1, c2, c3), axis=0)
+
+	@classmethod
+	def _get_atr(cls, data, window=None):
+		""" Average True Range
+		The average true range is an N-day smoothed moving average (SMMA) of
+		the true range values.  Default to 14 days.
+		https://en.wikipedia.org/wiki/Average_true_range
+		:param df: data
+		:return: None
+		"""
+		if window is None:
+			window = 14
+			column_name = 'atr'
+		else:
+			window = int(window)
+			column_name = 'atr_{}'.format(window)
+		tr_smma_column = 'tr_{}_smma'.format(window)
+		data[column_name] = data[tr_smma_column]
+		del data[tr_smma_column]
+
+	@classmethod
+	def _get_dma(cls, data):
+		""" Different of Moving Average
+		default to 10 and 50.
+		:param df: data
+		:return: None
+		"""
+		data['dma'] = data['close_10_sma'] - data['close_50_sma']
+
+	@classmethod
+	def _get_dmi(cls, data):
+		""" get the default setting for DMI
+		including:
+		+DI: 14 days SMMA of +DM,
+		-DI: 14 days SMMA of -DM,
+		DX: based on +DI and -DI
+		ADX: 6 days SMMA of DX
+		:param df: data
+		:return:
+		"""
+		data['pdi'] = cls._get_pdi(data, 14)
+		data['mdi'] = cls._get_mdi(data, 14)
+		data['dx'] = cls._get_dx(data, 14)
+		data['adx'] = data['dx_6_ema']
+		data['adxr'] = data['adx_6_ema']
+		return data
+	
+
+	@classmethod
+	def _get_um_dm(cls, data):
+		""" Up move and down move
+		initialize up move and down move
+		:param df: data
+		"""
+		hd = data['High'] - data['Open']
+		data['um'] = (hd + hd.abs()) / 2
+		ld = -data['Low'] - data['Open']
+		data['dm'] = (ld + ld.abs()) / 2
 
 ###########################SORTING###############################
 
