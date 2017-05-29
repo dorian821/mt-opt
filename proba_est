@@ -1,3 +1,17 @@
 Things to look for:
 
-take probabilities of turns and trends
+- take probabilities of turns and trends
+  - generate new dnc feature for to identify 'turning' and 'trending'
+    - Use slopes of SMAs of various timeframes to id turning points
+    - anything not turning is trending/slope greater/lesser than neutral band is trending - within band is turning (i.e. sideways is turning?)
+    
+  
+- take features used by dtree to run a naive bayes classifier
+  - function for collecting features
+  - output into NBC/SBC
+  
+  
+- modify dtree balancer to focus on a single specific class (i.e. -1)
+ 
+
+
