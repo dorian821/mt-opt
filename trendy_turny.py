@@ -5,7 +5,7 @@ def turningpoints(lst):
 
 
 #trend or turn
-def trend_turn(data):
+def trend_turn(data,highband,lowband):
   time_frame = (5,10,20)
   for t in time_frame:
     sma = data['Typical'].rolling(window=t).apply(mean).fillna(method='bfill')
