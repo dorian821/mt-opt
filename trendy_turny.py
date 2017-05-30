@@ -8,10 +8,12 @@ def turningpoints(lst):
 def trend_turn(data):
   time_frame = (5,10,20)
   for t in time_frame:
-    sma = data['Typical'].rolling(window=t).apply(mean)
+    sma = data['Typical'].rolling(window=t).apply(mean).fillna(method='bfill')
     slope = sma.rolling(window=3).apply(three_linest)
     data[str(t) + 'd_Trend/Turn'][slope > highband] = 'Up_Trend'
     data[str(t) + 'd_Trend/Turn'][slope < lowband] = 'Down_Trend'
     data[str(t) + 'd_Trend/Turn'][(data[str(t) + 'd_Trend/Turn'].shift(-1) == 'Down_Trend') & (data[str(t) + 'd_Trend/Turn'].isnull())] = 'Down_Turn'
     data[str(t) + 'd_Trend/Turn'][(data[str(t) + 'd_Trend/Turn'].shift(-1) == 'Up_Trend') & (data[str(t) + 'd_Trend/Turn'].isnull())] = 'Up_Turn'
     data[str(t) + 'd_Trend/Turn'].fillna(method='bfill')
+  return data
+    
