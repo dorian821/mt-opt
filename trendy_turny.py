@@ -20,3 +20,8 @@ def trend_turn(data,highband,lowband):
     data[str(t) + 'd_Trend/Turn'].fillna(method='bfill')
   return data
     
+def opt_volume_peak(data):
+    peak_moneyness = {}
+    for d in data['quote_date'].unique():
+        data['strike'][(data['quote_date'] == d) & (data['trade_volume'] == data['quote_date'].max())]
+                    
