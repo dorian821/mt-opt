@@ -23,7 +23,7 @@ def nearest_resup(val,arr,direction)
     
 def support_resistance(data,margin,level):    
     acres = np.sort(data[['High','Low']].stack())
-    while acres != centers:
+    while (acres != centers) | (len(centers)):
       acres = acres1
       centers = []
       for i in acres:
