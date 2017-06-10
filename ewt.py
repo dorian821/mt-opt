@@ -1,11 +1,23 @@
 
-
 def find_peaks(series):
-  divide and conquer
-  find all peaks
+  forward pass rolling argmax with window=x
+  backward pass rolling argmax with window=x
+  
+
 def find_bottoms(series):
   divide and conquer
   find all bottoms
+
+
+
+
+
+
+
+
+
+
+
 def find length to next corresponding bottoms for peaks or peaks for bottoms
 define corresponding bottom and peak
   peak corresponds to bottom or vv if range is close 
