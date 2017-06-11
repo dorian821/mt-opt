@@ -20,8 +20,12 @@ def vwap_ratios(data):
 
   
 def nearest_resup(val,arr,direction):
+    if direction == 1:
+        arr = arr[arr>val]
+    elif direction == -1:
+        arr = arr[arr<val]
     idx = np.argmin(np.abs(arr-val))
-    return arr.ix[idx+direction]
+    return arr[idx]
     
 def support_resistance(data,margin,level):    
     acres = list(np.sort(data[['High','Low']].stack()))
@@ -47,6 +51,10 @@ def support_resistance(data,margin,level):
     data = data.join(pd.Series(data=data['High']/data['Resistance'],index=data.index,name='Resistance_Ratio'))
     data = data.join(pd.Series(data=data['Low']/data['Support'],index=data.index,name='Support_Ratio'))
     return data 
+
+stk = typ(stk)
+stk = vwap(stk)
+df = support_resistance(stk,.0001,5)
 
     cluster highs and lows by normalized proximity
     take average of each cluster
