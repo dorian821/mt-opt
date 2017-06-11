@@ -1,0 +1,21 @@
+I've been using the function below to find the date in a series of dates that is closest to the target date. It was working fine until recently when I upgraded anaconda, numpy and pandas. 
+
+It now returns the error above. I'll post the re-trace in a bit.
+
+I've since downgraded back to pandas 0.19.2 and numpy 1.12.0 but it still returns the same error. Why would this happen?
+
+I've also tried in on python.org/shell and it works fine with the versions above. What changed and how do I fix it?
+
+
+def nearest_date(series,dat,i):
+	aray = series.reset_index(drop=True)
+	idx = np.abs(aray-dat).argmin()
+	try:
+		dat = aray[idx+i]
+	except:
+		try:
+			dat = aray[idx-i]
+		except:
+			dat = aray[idx]
+	dat = dt.date(dat.year, dat.month, dat.day)
+	return exp
