@@ -59,6 +59,14 @@ def support_resistance(data,margin,level):
     data = data.join(pd.Series(data=data['Low']/data['Support'],index=data.index,name='Support_Ratio'))
     return data, centers 
 
+def ease_of_movement(data,time):
+    distance = ((data['High']+data['Low'])/2) - ((data['High'].shift(1)+data['Low'].shift(1))/2)
+    box_rat = (data['Volume']/data['Volume'].rolling(window=200).mean())/(data['High']-data['Low'])
+    data = data.join(pd.Series(data=distance/box_rat,index=data.index,name=str(time)+'_Ease_of_Movement').rolling(window=time).mean())
+    return data
+    
+    1-Period EMV = ((H + L)/2 - (Prior H + Prior L)/2) / ((V/100,000,000)/(H - L))
+
 stk = typ(stk)
 stk = vwap(stk,200)
 stk = vwap_ratios(stk)
