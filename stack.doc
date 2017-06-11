@@ -1,3 +1,7 @@
+TypeError: data type "datetime" not understood 
+
+
+
 I've been using the function below to find the date in a series of dates that is closest to the target date. It was working fine until recently when I upgraded anaconda, numpy and pandas. 
 
 It now returns the error above. I'll post the re-trace in a bit.
