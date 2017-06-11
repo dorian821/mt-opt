@@ -39,12 +39,9 @@ def nearest_resup(val,arr,direction):
     
 def support_resistance(data,margin,level):    
     acres = list(np.sort(data[['High','Low']].stack()))
-    centers = []
-    acres1 = []    
-    m, n = 1, 0
-    while n != m:
-        print(n,m)
-        m = len(centers)
+    n = 0
+    while n != len(centers):
+        n = len(centers)
         centers = []
         for i,value in enumerate(acres):
             diff = list(np.abs(acres[i] - acres)/acres)
@@ -52,7 +49,6 @@ def support_resistance(data,margin,level):
             strength = len(cluster)
             if strength>=level:
                 centers.extend([np.sum(cluster)/strength])
-                n = len(centers)
         acres = centers
     centers = np.sort(centers)
     print(centers.max())
@@ -68,23 +64,6 @@ stk = vwap(stk,200)
 stk = vwap_ratios(stk)
 df, c = support_resistance(stk,.001,5)
 
-    cluster highs and lows by normalized proximity
-    take average of each cluster
-    store in dictionary with number of pop
-    for each day print nearest support and resistance and ratio of low/high to these
-    return nearest support and resistance and ratios
-  
-  
-for i in acres.index:
-    diff = pd.Series(np.abs(acres[i] - acres)/acres)
-    #print('took diffs')
-    cluster = acres[diff<margin]
-    #print('clustered')
-    strength = len(cluster)
-    #print('strength measured')
-    if strength>=level:
-        #print('list extending')
-        centers.extend([cluster.mean()])
         
     
     
