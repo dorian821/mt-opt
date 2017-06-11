@@ -2,8 +2,11 @@
 from numba import jit
 #VWAP
 @jit
-def vwap(data):
-    data = data.assign(VWAP=np.cumsum(data['Volume']*data['Typical'])/np.cumsum(data['Volume']))
+def vwap(data,window):
+    voltyp = pd.Series(data['Volume']*data['Typical'])
+    voltyp = voltyp.rolling(window=window).sum()
+    vol = pd.Series(data['Volume'].rolling(window=window).sum())
+    data = data.join(pd.Series(data=voltyp/vol,index=data.index,name='VWAP_'+str(window)))
     return data
 
 def typ(data):
@@ -12,20 +15,27 @@ def typ(data):
 
 #VWAP Ratios
 def vwap_ratios(data):
-    data.assign(VWAP_3dSlope=data['VWAP'].rolling(window=3,center=False).apply(three_linest),inplace=True)
-    data = data.join(pd.Series(data=data['5d_SMA']/data['VWAP'],index=data.index,name='5d_SMA/VWAP'))
-    data = data.join(pd.Series(data=data['High']/data['VWAP'],index=data.index,name='5d_SMA/VWAP'))
-    data = data.join(pd.Series(data=data['Low']/data['VWAP'],index=data.index,name='5d_SMA/VWAP'))
+    #data.assign(VWAP_3dSlope=data['VWAP'].rolling(window=3,center=False).apply(three_linest),inplace=True)
+    #data = data.join(pd.Series(data=data['5d_SMA']/data['VWAP'],index=data.index,name='5d_SMA/VWAP'))
+    data = data.join(pd.Series(data=data['High']/data['VWAP_200'],index=data.index,name='High/VWAP'))
+    data = data.join(pd.Series(data=data['Low']/data['VWAP_200'],index=data.index,name='Low/VWAP'))
     return data
 
   
 def nearest_resup(val,arr,direction):
     if direction == 1:
-        arr = arr[arr>val]
+        ar = arr[arr>val]
     elif direction == -1:
-        arr = arr[arr<val]
-    idx = np.argmin(np.abs(arr-val))
-    return arr[idx]
+        ar = arr[arr<val]
+    if len(ar) != 0:
+        idx = np.argmin(np.abs(ar-val))
+    else:
+        ar = arr
+        if direction == 1:
+            idx = np.argmax(ar)
+        elif direction == -1:       
+            idx = np.argmin(ar)
+    return ar[idx]
     
 def support_resistance(data,margin,level):    
     acres = list(np.sort(data[['High','Low']].stack()))
@@ -45,16 +55,18 @@ def support_resistance(data,margin,level):
                 n = len(centers)
         acres = centers
     centers = np.sort(centers)
+    print(centers.max())
     for j in data.index:
         data.loc[j,'Resistance'] = nearest_resup(data.loc[j]['High'],centers,1)
-        data.loc[j,'Support'] = nearest_resup(data.loc[j]['High'],centers,-1)        
+        data.loc[j,'Support'] = nearest_resup(data.loc[j]['Low'],centers,-1)        
     data = data.join(pd.Series(data=data['High']/data['Resistance'],index=data.index,name='Resistance_Ratio'))
     data = data.join(pd.Series(data=data['Low']/data['Support'],index=data.index,name='Support_Ratio'))
-    return data 
+    return data, centers 
 
 stk = typ(stk)
-stk = vwap(stk)
-df = support_resistance(stk,.0001,5)
+stk = vwap(stk,200)
+stk = vwap_ratios(stk)
+df, c = support_resistance(stk,.001,5)
 
     cluster highs and lows by normalized proximity
     take average of each cluster
