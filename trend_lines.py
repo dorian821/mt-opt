@@ -73,6 +73,8 @@ the take diff ratios of highs and lows
 then figure out a way to identify trendline cross overs
 try to keep trendlines that have the majority of the prices within them, i.e. above the lower and below the higher
 n should probably = 3-5
+draw parallels for lines tied to same degree opposite extremes
+take ratios of non-parrallel trendlines to identify convergence
       
       
       
