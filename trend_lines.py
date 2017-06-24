@@ -50,7 +50,8 @@ def extremities(data,col,n):
       elif col == 'Low':
          cut = pd.Series(data=np.linspace(series[0]+middle, series[-1]+middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=series.index)
          extremes = series[(series-cut) <= 0].min()
-      extremities[i] = extremes.groupby((extremes != extremes.shift()).cumsum()).idxmax()
+      extreme = extremes.groupby((extremes != extremes.shift()).cumsum()).idxmax()
+      extremities[i] =  extreme[extreme]
     else:
       for j, v in enumerate(extremeties[i-1]):
         if j == len(extremeties[i-1]) - 1:
@@ -63,7 +64,8 @@ def extremities(data,col,n):
         elif col == 'Low':
            cut = pd.Series(data=np.linspace(period[0]+middle, period[-1]+middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=period.index)
            extremes = period[(period-cut) <= 0].min()
-        extremities[i] = extremes.groupby((extremes != extremes.shift()).cumsum()).idxmax()
+         extreme = extremes.groupby((extremes != extremes.shift()).cumsum()).idxmax()
+        extremities[i] =  extreme[extreme]
    return extremities
 
 then for each value in extremities find the best trend line using the extremeties of the next level, do this for low and high
