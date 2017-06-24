@@ -35,8 +35,44 @@ def find_lsq(candidates, data): TL anchor is always the first candidate, candida
          cut = pd.Series(data=np.linspace(series[anchor_idx[i]]+middle, series[anchor_idx[i+1]]+middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=period.index)
          extremes = period[(period-cut) <= 0].min()
       extremes = extremes.groupby((extremes != extremes.shift()).cumsum()).idxmax()
-      extremities[i  
+      extremities[i]
         
+      
+def extremities(data,col,n):
+  series = data[col]
+  extremities = {}  
+  for i in np.arange(n):
+    if i == 0:
+      middle  = series.mean()      
+      if col == 'High':
+         cut = pd.Series(data=np.linspace(series[0]-middle, series[-1]-middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=series.index)
+         extreme = series[(series-cut) >= 0].max()
+      elif col == 'Low':
+         cut = pd.Series(data=np.linspace(series[0]+middle, series[-1]+middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=series.index)
+         extremes = series[(series-cut) <= 0].min()
+      extremities[i] = extremes.groupby((extremes != extremes.shift()).cumsum()).idxmax()
+    else:
+      for j, v in enumerate(extremeties[i-1]):
+        if j == len(extremeties[i-1]) - 1:
+          continue
+        period = series[extremeties[i-1][j]:extremeties[i-1][j+1]]
+        middle  = period.mean()      
+        if col == 'High':
+           cut = pd.Series(data=np.linspace(period[0]-middle, period[-1]-middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=period.index)
+           extreme = period[(period-cut) >= 0].max()
+        elif col == 'Low':
+           cut = pd.Series(data=np.linspace(period[0]+middle, period[-1]+middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=period.index)
+           extremes = period[(period-cut) <= 0].min()
+        extremities[i] = extremes.groupby((extremes != extremes.shift()).cumsum()).idxmax()
+   return extremities
+
+then for each value in extremities find the best trend line using the extremeties of the next level, do this for low and high
+      
+put trend linspaces into column in pieces where they are valid
+the take diff ratios of highs and lows
+then figure out a way to identify trendline cross overs
+try to keep trendlines that have the majority of the prices within them, i.e. above the lower and below the higher
+n should probably = 3-5
       
       
       
