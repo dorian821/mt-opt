@@ -19,17 +19,30 @@ def find_lsq(candidates, data): TL anchor is always the first candidate, candida
   return np.linspace(anchor[0], best_fit[0], num=len(data[anchor[1]:best_fit[1]]), endpoint=True, retstep=False, dtype=None)
     
 
-  def local_maxima(data,time_frame,zenith_or_nadir):
-    if zenith_or_nadir == 'zenith':
-      col = 'High'
-      direction = 1
-    elif zenith_or_nadir == 'nadir':
-      col = 'Low'
-      direction = -1
+  def extremes(data,col,threshold,direction):
     series = data[col]
     dominion = measure_turn(series,direction)
-    anchor_idx = series.index[dominion > threshold]
-    anchors = series[anchor_idx]
+    anchor_idx = [series.index[dominion > threshold]]
+    anchors = [series[anchor_idx]]
+    extremities = {}
+    for i in anchor_idx:
+      period = series[anchor_idx[i]:anchor_idx[i+1]]
+      middle  = period.mean()      
+      if col == 'High':
+         cut = pd.Series(data=np.linspace(series[anchor_idx[i]]-middle, series[anchor_idx[i+1]]-middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=period.index)
+         extreme = period[(period-cut) >= 0].max()
+      elif col == 'Low':
+         cut = pd.Series(data=np.linspace(series[anchor_idx[i]]+middle, series[anchor_idx[i+1]]+middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=period.index)
+         extremes = period[(period-cut) <= 0].min()
+      extremes = extremes.groupby((extremes != extremes.shift()).cumsum()).idxmax()
+      extremities[i  
+        
+      
+      
+      
+      
+      dominion[anchor_idx[i]+dt.datetime.timdelta(days=1):anchor_idx[i+1]].max()
+      
     
     anchor = pd.Series(data=rolling_idxmax(series,time_frame,-1),index=data.index).fillna(method='bfill')
     maxima = pd.Series(index=data.index,name='Trendline_Maxima')
