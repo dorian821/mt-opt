@@ -40,33 +40,39 @@ def find_lsq(candidates, data): TL anchor is always the first candidate, candida
       
 def extremities(data,col,n):
   series = data[col]
-  extremities = {}  
+  extremitys = {}  
   for i in np.arange(n):
     if i == 0:
-      middle  = series.mean()      
+      middle  = series.mean()  
+      m = np.polyfit(x=np.arange(len(series.iloc[:-100])),y=series.iloc[:-100],deg=1)[0]
+      mid_idx = int(len(series)/2)
+      remainder = len(series) - mid_idx
+      cut = pd.Series(data=np.linspace(0, m*mid_idx, num=mid_idx,endpoint=True, retstep=False, dtype=None),index=series.index[:mid_idx])
+      cut1 = pd.Series(data=np.linspace(m*mid_idx, m*mid_idx+(m*remainder), num=remainder,endpoint=True, retstep=False, dtype=None),index=series.index[mid_idx:])
+      cutt = cut.append(cut1)
       if col == 'High':
-         cut = pd.Series(data=np.linspace(series[0]-middle, series[-1]-middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=series.index)
-         extreme = series[(series-cut) >= 0].max()
+        extremes = (series-cutt) > 0        
       elif col == 'Low':
-         cut = pd.Series(data=np.linspace(series[0]+middle, series[-1]+middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=series.index)
-         extremes = series[(series-cut) <= 0].min()
-      extreme = extremes.groupby((extremes != extremes.shift()).cumsum()).idxmax()
-      extremities[i] =  extreme[extreme]
+        extremes = (series-cutt) < 0 
+      extreme = series.groupby((extremes != extremes.shift()).cumsum()).idxmax()
+      extremitys[i] =  series[extreme]
     else:
       for j, v in enumerate(extremeties[i-1]):
         if j == len(extremeties[i-1]) - 1:
           continue
         period = series[extremeties[i-1][j]:extremeties[i-1][j+1]]
-        middle  = period.mean()      
+        middle  = series.mean()  
+        m = np.polyfit(x=np.arange(len(series.iloc[:-100])),y=series.iloc[:-100],deg=1)[0]
+        cut = pd.Series(data=np.linspace(0, m*mid_idx, num=mid_idx,endpoint=True, retstep=False, dtype=None),index=series.index[:mid_idx])
+        cut1 = pd.Series(data=np.linspace(m*mid_idx, m*mid_idx+(m*remainder), num=remainder,endpoint=True, retstep=False, dtype=None),index=series.index[mid_idx:])
+        cutt = cut.append(cut1)
         if col == 'High':
-           cut = pd.Series(data=np.linspace(period[0]-middle, period[-1]-middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=period.index)
-           extreme = period[(period-cut) >= 0].max()
+          extremes = (series-cutt) > 0 
         elif col == 'Low':
-           cut = pd.Series(data=np.linspace(period[0]+middle, period[-1]+middle, num=len(period),endpoint=True, retstep=False, dtype=None),index=period.index)
-           extremes = period[(period-cut) <= 0].min()
-         extreme = extremes.groupby((extremes != extremes.shift()).cumsum()).idxmax()
-        extremities[i] =  extreme[extreme]
-   return extremities
+          extremes = (series-cutt) < 0
+        extreme = extremes.groupby((extremes != extremes.shift()).cumsum()).idxmax()
+        extremitys[i] =  series[extreme]
+  return extremitys
 
 then for each value in extremities find the best trend line using the extremeties of the next level, do this for low and high
       
