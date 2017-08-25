@@ -8,7 +8,10 @@ import sys
  
  
     
-   sma_cols = [   ]
+peak_sum_cols = ['trade_volume','open_interest']
+peak_mean_cols: 
+cp_ratio_cols:
+
     
 def next_monthlies(d): # must test len of option price history to ensure 1: that purchase is possible on d2 and 2: that there is at least 12 days of data
     f,g,h,k = d + dt.timedelta(days=95),d + dt.timedelta(days=180),d + dt.timedelta(days=270),d + dt.timedelta(days=360)
@@ -161,9 +164,10 @@ class option_analyzer(object):
     #cycle through days, exps, and option types to generate data.
                   
     def oa_option_hi_lo_factors(self,opt_data):
-       report = pd.DataFrame()            
+       report = pd.DataFrame()
+       opt_data = opt_data[(opt_data['Moneyness'] <= 5) & (opt_data['Moneyness'] >= -5) & (opt_data['Exp_Week']<=8),['open','high','low','U_Hi_Factor','U_Lo_Factor' ]]
        for d in opt_data['quote_date'].unique():
-           raw_data = opt_data[(opt_data['quote_date']==d) & (opt_data['Moneyness'] <= 5) & (opt_data['Moneyness'] >= -5) & (opt_data['Exp_Week']<=8),['open','high','low','U_Hi_Factor','U_Lo_Factor' ]]
+           raw_data = opt_data[(opt_data['quote_date']==d)]
            for expir in raw_data['expiration'].unique():
                data = raw_data[raw_data['expiration']=expir]
                for typ in data['option_type'].unique():
@@ -181,17 +185,16 @@ class option_analyzer(object):
                    
                    
     def daily_volumes_mean(self,report,opt_data):
-        for col in ['trade_volume','open_interest']:
-            for name, group in opt_data.groupby(['quote_date','Exp_Week'])[col]:
-                report[str(name[1])+'_Week_Exp_'+col] = 0
-                report.loc[name[0],str(name[1])+'_Week_Exp_'+col] = group.mean()
+        col = 'implied_volatility_eod'
+        for name, group in opt_data.groupby(['quote_date','Exp_Week'])[col]:
+            report[str(name[1])+'_Week_Exp_'+col] = 0
+            report.loc[name[0],str(name[1])+'_Week_Exp_'+col] = group.mean()
         return report
     
     def oa_peak_sum(self,report,opt_data,col):
         report = pd.DataFrame(columns=peak_cols)
         opt_data = opt_data[(opt_data['Moneyness'] <= 10) & (opt_data['Moneyness'] >= -10) & (opt_data['Exp_Week']<=8)]
         group = opt_data.groupby(['Moneyness','Exp_Week'],axis=0)[col].sum()
-        idx = pd.IndexSlice     
         for exp in group.index.get_level_values(level=1):
             report.loc[d,str(exp)+'_Week_Exp_Max_'+col] = int(group.loc[:,exp].idxmax())
         return report
@@ -219,32 +222,40 @@ class option_analyzer(object):
           puts = pd.read_csv(''.join([self.direct.db_dir,symb,'\\Options\\',self.symb,'_',str(chrono.year),'_Puts.csv']),'rb',delimiter=',',parse_dates=['expiration','quote_date'],infer_datetime_format=True).sort_values(by='quote_date')
           return pd.concat([calls,puts],axis=0)
            
-      def option_analysis(dates,):
+      def option_analysis(self,dates):
         opt_analysis = pd.DataFrame(index=dates)
         start = dates.iloc[0]
         in_mem = start
         opt_data = load_calls_puts(start.year)
+                   
+        opt_data = opt_data[opt_data['quote_date'].isin(dates)]           
         opt_data = option_analysis_gen_cols(opt_data)
-        for col in daily_sum_cols:
-          opt_analysis = pd.concat([opt_analysis,daily_volumes_sum(self,report,opt_data)],axis=1)
-        for col in daily_sum_cols:
-          opt_analysis = pd.concat([opt_analysis,daily_volumes_mean(self,report,opt_data)],axis=1)
+        dv_sum = daily_volumes_sum(self,report,opt_data)
+        sma_cols = dv_sum.columns
+        dv_mean = daily_volumes_mean(self,report,opt_data)
+        sma_cols.extend(dv_mean.columns)
+        opt_analysis = pd.concat([opt_analysis,dv_sum],axis=1)
+        opt_analysis = pd.concat([opt_analysis,dv_mean],axis=1)
+        opt_analysis = pd.concat([opt_analysis,oa_option_hi_lo_factors(opt_data)],axis=1)  
         for d in dates:
-          max_exp = get_max_exp(d)
+          max_exp = six_monthly(d)
           if d.year != max_exp.year:
             addendum = update_opt_data(max_exp)
-            opt_data = pd.concat([opt_data[d:],,axis=0)
+            opt_data = pd.concat([opt_data[d:],addendum],axis=0)
             in_mem = opt_data['expiration'].max()
           optdata = opt_data[opt_data['quote_date'] == d]
           for col in sma_cols:
              opt_analysis = pd.concat([opt_analysis,option_sma(optdata,col)],axis=1)
           for col in peak_sum_cols:
-             opt_analysis = pd.concat([opt_analysis,oa_peak_mean(opt_analysis,opt_data,col)],axis=1)
-          for col in peak_mean_cols:
              opt_analysis = pd.concat([opt_analysis,oa_peak_sum(opt_analysis,opt_data,col)],axis=1)
+          for col in peak_mean_cols:
+             opt_analysis = pd.concat([opt_analysis,oa_peak_mean(opt_analysis,opt_data,col)],axis=1)
           for col in cp_ratio_cols:
              opt_analysis = pd.concat([opt_analysis,oa_callput_ratios_mean(opt_data,col)],axis=1)
-          opt_analysis = pd.concat([opt_analysis,oa_option_hi_lo_factors(opt_data)],axis=1)  
+        opt_analysis.to_csv(...
+        pickle.dump(opt_analysis...)
+        return opt_analysis
+          
              
 '''
  
