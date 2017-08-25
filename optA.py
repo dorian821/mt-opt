@@ -1,246 +1,3 @@
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-72
-73
-74
-75
-76
-77
-78
-79
-80
-81
-82
-83
-84
-85
-86
-87
-88
-89
-90
-91
-92
-93
-94
-95
-96
-97
-98
-99
-100
-101
-102
-103
-104
-105
-106
-107
-108
-109
-110
-111
-112
-113
-114
-115
-116
-117
-118
-119
-120
-121
-122
-123
-124
-125
-126
-127
-128
-129
-130
-131
-132
-133
-134
-135
-136
-137
-138
-139
-140
-141
-142
-143
-144
-145
-146
-147
-148
-149
-150
-151
-152
-153
-154
-155
-156
-157
-158
-159
-160
-161
-162
-163
-164
-165
-166
-167
-168
-169
-170
-171
-172
-173
-174
-175
-176
-177
-178
-179
-180
-181
-182
-183
-184
-185
-186
-187
-188
-189
-190
-191
-192
-193
-194
-195
-196
-197
-198
-199
-200
-201
-202
-203
-204
-205
-206
-207
-208
-209
-210
-211
-212
-213
-214
-215
-216
-217
-218
-219
-220
-221
-222
-223
-224
-225
-226
-227
-228
-229
-230
-231
-232
-233
-234
-235
-236
-237
-238
-239
-240
-241
-242
-243
 import mt_auto.beta.mt_auto as mt
 import pandas as pd
 import numpy as np
@@ -325,7 +82,7 @@ class stock(object):
         return self.stk.loc[d,'Low']
          
 class option_analyzer(object):
-    peak_cols = [str(i) + '_Week_Exp_Max_'+col for i in np.arange(8)+1 for col in ['U_Hi_Factor','trade_volume','open_interest']]
+    peak_cols = [str(i) + '_Week_Exp_Max_'+col for i in np.arange(9) for col in ['U_Hi_Factor','U_Lo_Factor','trade_volume','open_interest']]
     opt_cols = ['Underlying_Open','Underlying_High','Underlying_Low','1_Month_Exp','1_Month_Exp','3_Month_Exp','4_Month_Exp','5_Month_Exp','6_Month_Exp']
     def __init__(self,symb,direct):
         self.symb = symb
@@ -338,30 +95,7 @@ class option_analyzer(object):
         else:
             self.report = pd.DataFrame(columns=report_cols)
          
-    def daily_volumes(self,report,opt_data):
-        for col in ['trade_volume','open_interest']:
-            for name, group in opt_data.groupby(['quote_date','Exp_Week'])[col]:
-                report[str(name[1])+'_Week_Exp_'+col] = 0
-                report.loc[name[0],str(name[1])+'_Week_Exp_'+col] = group.sum()
-        return report
-    
-    def oa_peak_sum(self,report,opt_data,col):
-        report = pd.DataFrame(columns=peak_cols)
-        opt_data = opt_data[(opt_data['Moneyness'] <= 10) & (opt_data['Moneyness'] >= -10) & (opt_data['Exp_Week']<=8)]
-        group = opt_data.groupby(['Moneyness','Exp_Week'],axis=0)[col].sum()
-        idx = pd.IndexSlice     
-        for exp in group.index.get_level_values(level=1):
-            report.loc[d,str(exp)+'_Week_Exp_Max_'+col] = int(group.loc[:,exp].idxmax())
-        return report
-       
-    def oa_peak_mean(self,report,opt_data,col):
-        report = pd.DataFrame(columns=peak_cols)
-        opt_data = opt_data[(opt_data['Moneyness'] <= 10) & (opt_data['Moneyness'] >= -10) & (opt_data['Exp_Week']<=8)]
-        group = opt_data.groupby(['Moneyness','Exp_Week'],axis=0)[col].mean()
-        idx = pd.IndexSlice     
-        for exp in group.index.get_level_values(level=1):
-            report.loc[d,str(exp)+'_Week_Exp_Max_'+col] = int(group.loc[:,exp].idxmax())
-        return report
+
  
     def option_analysis_gen_cols(opt_data):
         for col in opt_cols:
@@ -387,15 +121,29 @@ class option_analyzer(object):
         return opt_data
    
      
-    def oa_callput_ratios(self,opt_data,col):
-        opt_data = opt_data[(opt_data['Moneyness'] <= 5) & (opt_data['Moneyness'] >= -5) & (opt_data['Exp_Week']<=8)]
-        for d in opt_data['quote_date']:
+    def oa_callput_ratios_sum(self,opt_data,col):
+        #volume & OI
+        opt_data = opt_data[(opt_data['Moneyness'] <= 5) & (opt_data['Moneyness'] >= -5) & (opt_data['Exp_Week']<=8),['quote_date','Exp_Week',col]]
+        for d in opt_data['quote_date'].unique():
             data = opt_data[opt_data['quote_date']==d]
             for exp in np.arange(9):
                 data = data[data['Exp_Week']==exp]
                 for stx in np.arange(6):
-                    call = data[col][{data['option'].isin('c')) & (opt_data['Moneyness'] == stx)].sum()
-                    put = data[col][{data['option'].isin('p')) & (opt_data['Moneyness'] == stx)].sum()
+                    call = data[col][{data['option_type'].isin(['c','C'])) & (opt_data['Moneyness'] == stx)].sum()
+                    put = data[col][{data['option_type'].isin(['p','P'])) & (opt_data['Moneyness'] == (stx*-1))].sum()
+                    report.loc[d,str(stx)+'_Stx_CP_'+col+'_Ratio_Week_'+str(exp)] = call/put
+        return report
+                                     
+     def oa_callput_ratios_mean(self,opt_data,col):
+        #hi/lo factors
+        opt_data = opt_data[(opt_data['Moneyness'] <= 5) & (opt_data['Moneyness'] >= -5) & (opt_data['Exp_Week']<=8),['quote_date','Exp_Week',col]]
+        for d in opt_data['quote_date'].unique():
+            data = opt_data[opt_data['quote_date']==d]
+            for exp in np.arange(9):
+                data = data[data['Exp_Week']==exp]
+                for stx in np.arange(6):
+                    call = data[col][{data['option_type'].isin(['c','C'])) & (opt_data['Moneyness'] == stx)].mean()
+                    put = data[col][{data['option_type'].isin(['p','P'])) & (opt_data['Moneyness'] == (stx*-1))].mean()
                     report.loc[d,str(stx)+'_Stx_CP_'+col+'_Ratio_Week_'+str(exp)] = call/put
         return report
       
@@ -411,15 +159,43 @@ class option_analyzer(object):
      
     factor_cols = {'call':{'hi':'U_Hi_Factor','lo':'U_Lo_Factor'},'put':{'hi':'U_Lo_Factor','lo':'U_Hi_Factor'}
     #cycle through days, exps, and option types to generate data.
-    for d in opt_data['quote_date'].unique():
-        raw_data = opt_data[(opt_data['quote_date']==d) & (opt_data['strike']<(opt_data['Underlying_Open']*1.025)) & (opt_data['strike']<(opt_data['Underlying_Open']*.975))&(expiration filter)]
-        for expir in raw_data['expiration'].unique():
-            data = raw_data[raw_data['expiration']=expir]
-            for typ in data['option_type'].unique():
-                data = data[data['option_type']==typ]
-                option_report.at[d,typ+'_Hi_Factor'] = ((data['high']-data['open'])/-data['open'])/data['open'])/data[factor_cols[typ]['hi']]
-                option_report.at[d,typ+'_Lo_Factor'] = ((data['low']-data['open'])/data['open'])/data[factor_cols[typ]['lo']]
- 
+                  
+    def oa_option_hi_lo_factors(self,opt_data):
+       report = pd.DataFrame()            
+       for d in opt_data['quote_date'].unique():
+           raw_data = opt_data[(opt_data['quote_date']==d) & (opt_data['Moneyness'] <= 5) & (opt_data['Moneyness'] >= -5) & (opt_data['Exp_Week']<=8),['open','high','low','U_Hi_Factor','U_Lo_Factor' ]]
+           for expir in raw_data['expiration'].unique():
+               data = raw_data[raw_data['expiration']=expir]
+               for typ in data['option_type'].unique():
+                   data = data[data['option_type']==typ]
+                   report.at[d,typ+'_Hi_Factor'] = ((data['high']-data['open'])/-data['open'])/data['open'])/data[factor_cols[typ]['hi']]
+                   report.at[d,typ+'_Lo_Factor'] = ((data['low']-data['open'])/data['open'])/data[factor_cols[typ]['lo']]
+       return report
+                   
+    def daily_volumes(self,report,opt_data):
+        for col in ['trade_volume','open_interest']:
+            for name, group in opt_data.groupby(['quote_date','Exp_Week'])[col]:
+                report[str(name[1])+'_Week_Exp_'+col] = 0
+                report.loc[name[0],str(name[1])+'_Week_Exp_'+col] = group.sum()
+        return report
+    
+    def oa_peak_sum(self,report,opt_data,col):
+        report = pd.DataFrame(columns=peak_cols)
+        opt_data = opt_data[(opt_data['Moneyness'] <= 10) & (opt_data['Moneyness'] >= -10) & (opt_data['Exp_Week']<=8)]
+        group = opt_data.groupby(['Moneyness','Exp_Week'],axis=0)[col].sum()
+        idx = pd.IndexSlice     
+        for exp in group.index.get_level_values(level=1):
+            report.loc[d,str(exp)+'_Week_Exp_Max_'+col] = int(group.loc[:,exp].idxmax())
+        return report
+       
+    def oa_peak_mean(self,report,opt_data,col):
+        report = pd.DataFrame(columns=peak_cols)
+        opt_data = opt_data[(opt_data['Moneyness'] <= 10) & (opt_data['Moneyness'] >= -10) & (opt_data['Exp_Week']<=8)]
+        group = opt_data.groupby(['Moneyness','Exp_Week'],axis=0)[col].mean()
+        idx = pd.IndexSlice     
+        for exp in group.index.get_level_values(level=1):
+            report.loc[d,str(exp)+'_Week_Exp_Max_'+col] = int(group.loc[:,exp].idxmax())
+        return report
          
        
       dets = ...
@@ -436,11 +212,12 @@ class option_analyzer(object):
           return pd.concat([calls,puts],axis=0)
            
       def option_analysis(dates,):
-        opt_analysis = pd.DataFrame(columns=opt_analysis_cols)
+        opt_analysis = pd.DataFrame(index=dates)
         start = dates.iloc[0]
         in_mem = start
         opt_data = load_calls_puts(start.year)
         opt_data = option_analysis_gen_cols(opt_data)
+        opt_analysis = pd.concat([opt_analysis,daily_volumes(self,report,opt_data)],axis=1)
         for d in dates:
           max_exp = get_max_exp(d)
           if d.year != max_exp.year:
@@ -449,14 +226,14 @@ class option_analyzer(object):
             in_mem = opt_data['expiration'].max()
           optdata = opt_data[opt_data['quote_date'] == d]
           for col in sma_cols:
-            opt_analysis.at[d,sma_cols] = option_analysis_sma_ratios(optdata,col)
-          for col in peak_cols:
-            opt_analysis.at[d,peak_cols] = option_analysis_peak(optdata,col,max())
-          for col in mean_cols:
-              opt_analysis.at[d,mean_cols] = option_analysis_mean(optdata,col,max())
+             opt_analysis = pd.concat([opt_analysis,option_sma(optdata,col)],axis=1)
+          for col in peak_sum_cols:
+             opt_analysis = pd.concat([opt_analysis,oa_peak_mean(opt_analysis,opt_data,col)],axis=1)
+          for col in peak_mean_cols:
+             opt_analysis = pd.concat([opt_analysis,oa_peak_sum(opt_analysis,opt_data,col)],axis=1)
           for col in cp_ratio_cols:
-            opt_analysis.at[d,cp_ratio_cols] = option_analysis_callput_ratios(opt_data,col)
-             
+             opt_analysis = pd.concat([opt_analysis,oa_callput_ratios_mean(opt_data,col)],axis=1)
+          opt_analysis = pd.concat([opt_analysis,oa_option_hi_lo_factors(opt_data)],axis=1)  
              
 '''
  
