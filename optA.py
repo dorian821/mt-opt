@@ -172,11 +172,19 @@ class option_analyzer(object):
                    report.at[d,typ+'_Lo_Factor'] = ((data['low']-data['open'])/data['open'])/data[factor_cols[typ]['lo']]
        return report
                    
-    def daily_volumes(self,report,opt_data):
+    def daily_volumes_sum(self,report,opt_data):
         for col in ['trade_volume','open_interest']:
             for name, group in opt_data.groupby(['quote_date','Exp_Week'])[col]:
                 report[str(name[1])+'_Week_Exp_'+col] = 0
                 report.loc[name[0],str(name[1])+'_Week_Exp_'+col] = group.sum()
+        return report
+                   
+                   
+    def daily_volumes_mean(self,report,opt_data):
+        for col in ['trade_volume','open_interest']:
+            for name, group in opt_data.groupby(['quote_date','Exp_Week'])[col]:
+                report[str(name[1])+'_Week_Exp_'+col] = 0
+                report.loc[name[0],str(name[1])+'_Week_Exp_'+col] = group.mean()
         return report
     
     def oa_peak_sum(self,report,opt_data,col):
@@ -217,7 +225,10 @@ class option_analyzer(object):
         in_mem = start
         opt_data = load_calls_puts(start.year)
         opt_data = option_analysis_gen_cols(opt_data)
-        opt_analysis = pd.concat([opt_analysis,daily_volumes(self,report,opt_data)],axis=1)
+        for col in daily_sum_cols:
+          opt_analysis = pd.concat([opt_analysis,daily_volumes_sum(self,report,opt_data)],axis=1)
+        for col in daily_sum_cols:
+          opt_analysis = pd.concat([opt_analysis,daily_volumes_mean(self,report,opt_data)],axis=1)
         for d in dates:
           max_exp = get_max_exp(d)
           if d.year != max_exp.year:
